@@ -134,7 +134,8 @@ func _append(text: String) -> void:
 
 
 func _scroll_to_bottom() -> void:
-	_scroll.scroll_vertical = _scroll.get_v_scroll_bar().max_value as int
+	await get_tree().process_frame
+	_scroll.scroll_vertical = int(_scroll.get_v_scroll_bar().max_value)
 
 
 func _on_text_changed(new_text: String) -> void:

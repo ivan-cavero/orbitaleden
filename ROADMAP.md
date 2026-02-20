@@ -234,20 +234,33 @@ orbital_eden/
 - [x] Test items in prototype scene (EditorItems node)
 - [x] Test: Walk to items, push them, see highlight and prompt, press E to pickup
 
-### 3.4 Inventory Data
-- [ ] `InventoryData` resource:
-  ```
-  slots: Array[ItemStack] (fixed size, e.g., 30)
-  max_slots: int
-  ```
-- [ ] Functions:
+### 3.4 Inventory Data ✅
+- [x] `InventoryData` resource (`resources/inventory/inventory_data.gd`):
+  - slots: Array[ItemStack] (fixed size, default 30)
+  - max_slots: int
+- [x] Functions:
   - `add_item(item, quantity)` → returns overflow
+  - `add_stack(stack)` → returns overflow as ItemStack
   - `remove_item(item, quantity)` → returns success
   - `has_item(item, quantity)` → bool
   - `get_item_count(item)` → int
   - `find_slot(item)` → slot index or -1
-- [ ] Signal: `inventory_changed`
-- [ ] Test: Add/remove items programmatically
+  - `find_empty_slot()` → slot index or -1
+  - `get_slot(index)` → ItemStack or null
+  - `clear_slot(index)` → removed ItemStack
+  - `swap_slots(from, to)`
+  - `merge_slots(from, to)` → bool
+  - `get_summary()` → String (debug output)
+- [x] Signals: `inventory_changed`, `slot_changed(index)`
+- [x] `PlayerInventory` component (`entities/player/player_inventory.gd`):
+  - Creates and manages InventoryData instance
+  - Handles WorldItem pickup
+  - Signals: `item_picked_up`, `pickup_failed`
+  - `print_inventory()` for console
+- [x] Console commands:
+  - `inv` - show inventory contents
+  - `give <item_id> [quantity]` - add items directly
+- [x] Test: Pickup items, use `inv` and `give` commands
 
 ### 3.5 Inventory UI
 - [ ] `InventoryUI.tscn` - CanvasLayer:
@@ -276,11 +289,12 @@ orbital_eden/
 - [ ] Effects implemented in Phase 4 (stats)
 - [ ] Test: Use food ration, it disappears from inventory
 
-### 3.8 Console Item Commands
-- [ ] `give` command now works with real items
-- [ ] `list_items` shows all registered items
-- [ ] `giveall` gives one of each item
-- [ ] Test: Give items via console, they appear in inventory
+### 3.8 Console Item Commands ✅
+- [x] `give <item_id> [quantity]` - adds items to player inventory
+- [x] `items` - shows all registered item IDs
+- [x] `inv` - displays inventory contents
+- [x] `spawn <item_id> [quantity]` - spawns WorldItem in front of player
+- [x] Test: All commands work correctly
 
 **Milestone 3 Complete:**
 - [ ] Can interact with objects in world

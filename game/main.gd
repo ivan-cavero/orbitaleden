@@ -72,6 +72,8 @@ func _register_commands() -> void:
 	console.register_command("tp",       _cmd_tp,       "Teleport. Usage: tp <x> <y> <z>")
 	console.register_command("spawn",    _cmd_spawn,    "Spawn item. Usage: spawn <item_id> [quantity]")
 	console.register_command("items",    _cmd_items,    "List all available item IDs")
+	console.register_command("inv",      _cmd_inv,      "Show inventory contents")
+	console.register_command("give",     _cmd_give,     "Add item to inventory. Usage: give <item_id> [quantity]")
 
 
 func _get_player() -> Node:
@@ -174,3 +176,57 @@ func _cmd_items(_args: Array[String]) -> void:
 	
 	var ids: Array = prototype.get_item_ids()
 	Debug.info("Available items: %s" % ", ".join(ids))
+
+
+func _cmd_inv(_args: Array[String]) -> void:
+	var p := _get_player()
+	if not is_instance_valid(p):
+		return
+	
+	var inventory_node: Node = p.get_node_or_null("Inventory")
+	if not inventory_node or not inventory_node.has_method("print_inventory"):
+		Debug.error("Player has no inventory")
+		return
+	
+	inventory_node.print_inventory()
+
+
+func _cmd_give(args: Array[String]) -> void:
+	if args.is_empty():
+		Debug.warn("Usage: give <item_id> [quantity]")
+		return
+	
+	var item_id: String = args[0]
+	var qty: int = 1
+	if args.size() >= 2:
+		qty = maxi(args[1].to_int(), 1)
+	
+	var p := _get_player()
+	if not is_instance_valid(p):
+		return
+	
+	# Load item definition
+	var prototype: Node = get_node_or_null("Prototype")
+	if not prototype:
+		Debug.error("No prototype scene")
+		return
+	
+	var item_path := "res://resources/items/definitions/%s.tres" % item_id
+	var item_def: Resource = load(item_path)
+	
+	if not item_def:
+		Debug.error("Unknown item: %s (use 'items' to list)" % item_id)
+		return
+	
+	var inventory_node: Node = p.get_node_or_null("Inventory")
+	if not inventory_node:
+		Debug.error("Player has no inventory")
+		return
+	
+	var overflow: int = inventory_node.add_item(item_def, qty)
+	
+	if overflow == 0:
+		Debug.ok("Added %dx %s to inventory" % [qty, item_def.display_name])
+	else:
+		var added := qty - overflow
+		Debug.warn("Added %dx %s (overflow: %d)" % [added, item_def.display_name, overflow])

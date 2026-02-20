@@ -91,10 +91,14 @@ func try_pickup(player: Node) -> bool:
 		Debug.error("WorldItem: Cannot pickup - no item definition")
 		return false
 	
-	# Emit signal for inventory system to handle
+	# Try to add to player inventory
+	var player_inventory = player.get_node_or_null("Inventory")
+	if player_inventory and player_inventory.has_method("on_world_item_picked_up"):
+		player_inventory.on_world_item_picked_up(item_definition, quantity, player)
+	
+	# Also emit signal for any other listeners
 	picked_up.emit(item_definition, quantity, player)
 	
-	Debug.ok("Picked up %dx %s" % [quantity, item_definition.display_name])
 	queue_free()
 	return true
 
