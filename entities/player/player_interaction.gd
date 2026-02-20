@@ -80,6 +80,13 @@ func _configure_raycast() -> void:
 # ─────────────────────────────────────────────────────────────────────────────
 
 func _update_target() -> void:
+	# Check if current target was destroyed
+	if current_target and not is_instance_valid(current_target):
+		_highlighted_data.clear()
+		current_target = null
+		target_changed.emit(null)
+		return
+	
 	var new_target := _detect_interactable()
 	
 	if new_target != current_target:
@@ -127,8 +134,18 @@ func _set_target(new_target: Node) -> void:
 # ─────────────────────────────────────────────────────────────────────────────
 
 func _try_interact() -> void:
-	if current_target and current_target.enabled:
-		current_target.interact(_player)
+	if not is_instance_valid(current_target):
+		current_target = null
+		return
+	
+	if not current_target.enabled:
+		return
+	
+	# Interact and immediately clear target (it will be destroyed)
+	current_target.interact(_player)
+	_highlighted_data.clear()
+	current_target = null
+	target_changed.emit(null)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Highlight System
@@ -192,7 +209,7 @@ func _create_highlighted_material(source: Material, tint_color: Color) -> Standa
 
 func _remove_highlight() -> void:
 	for data in _highlighted_data:
-		var mesh: MeshInstance3D = data["mesh"]
+		var mesh = data["mesh"]  # No type hint to avoid freed instance errors
 		if is_instance_valid(mesh):
 			mesh.set_surface_override_material(data["surface_idx"], data["original_material"])
 	

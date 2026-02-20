@@ -70,6 +70,8 @@ func _register_commands() -> void:
 	console.register_command("speed",    _cmd_speed,    "Get/set speed multiplier. Usage: speed [value]")
 	console.register_command("respawn",  _cmd_respawn,  "Teleport to spawn point")
 	console.register_command("tp",       _cmd_tp,       "Teleport. Usage: tp <x> <y> <z>")
+	console.register_command("spawn",    _cmd_spawn,    "Spawn item. Usage: spawn <item_id> [quantity]")
+	console.register_command("items",    _cmd_items,    "List all available item IDs")
 
 
 func _get_player() -> Node:
@@ -133,3 +135,42 @@ func _cmd_tp(args: Array[String]) -> void:
 	p.global_position = Vector3(args[0].to_float(), args[1].to_float(), args[2].to_float())
 	p.velocity = Vector3.ZERO
 	Debug.ok("Teleported to (%.1f, %.1f, %.1f)" % [args[0].to_float(), args[1].to_float(), args[2].to_float()])
+
+
+func _cmd_spawn(args: Array[String]) -> void:
+	if args.is_empty():
+		Debug.warn("Usage: spawn <item_id> [quantity]")
+		return
+	
+	var item_id: String = args[0]
+	var qty: int = 1
+	if args.size() >= 2:
+		qty = maxi(args[1].to_int(), 1)
+	
+	var p := _get_player()
+	if not is_instance_valid(p):
+		return
+	
+	# Get prototype scene to spawn items
+	var prototype: Node = get_node_or_null("Prototype")
+	if not prototype or not prototype.has_method("spawn_item_at"):
+		Debug.error("No prototype scene with spawn support")
+		return
+	
+	# Spawn in front of player
+	var spawn_pos: Vector3 = p.global_position + (-p.global_transform.basis.z * 2.0) + Vector3.UP
+	
+	if prototype.spawn_item_at(item_id, spawn_pos, qty):
+		Debug.ok("Spawned %dx %s" % [qty, item_id])
+	else:
+		Debug.error("Unknown item: %s (use 'items' to list)" % item_id)
+
+
+func _cmd_items(_args: Array[String]) -> void:
+	var prototype: Node = get_node_or_null("Prototype")
+	if not prototype or not prototype.has_method("get_item_ids"):
+		Debug.error("No prototype scene with item support")
+		return
+	
+	var ids: Array = prototype.get_item_ids()
+	Debug.info("Available items: %s" % ", ".join(ids))

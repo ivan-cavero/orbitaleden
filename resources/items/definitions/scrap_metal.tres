@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="ItemDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://resources/items/item_definition.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+id = "scrap_metal"
+display_name = "Scrap Metal"
+description = "Salvaged metal scraps. Basic material for crafting."
+world_mesh = null
+color = Color(0.5, 0.5, 0.55, 1)
+category = 0
+tier = 1
+stack_size = 100
+weight = 0.5
+usable = false
+equippable = false

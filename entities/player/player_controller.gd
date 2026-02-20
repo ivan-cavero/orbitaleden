@@ -38,6 +38,12 @@ enum MoveMode { NORMAL, FLY, NOCLIP }
 @export var bob_frequency: float = 2.0
 @export var bob_amplitude: float = 0.02
 
+@export_group("Physics Interaction")
+## Force applied when pushing RigidBody3D objects
+@export var push_force: float = 0.8
+## Maximum velocity a pushed object can have
+@export var max_push_velocity: float = 3.0
+
 # === Constants ===
 const GRAVITY: float = 9.8
 
@@ -147,6 +153,7 @@ func _process_normal(delta: float) -> void:
 		velocity.z = move_toward(velocity.z, 0.0, deceleration * delta)
 
 	move_and_slide()
+	_push_rigid_bodies()
 
 
 func _process_fly(delta: float) -> void:
@@ -269,3 +276,30 @@ func respawn() -> void:
 func set_spawn(pos: Vector3, yaw: float = 0.0) -> void:
 	_spawn_position = pos
 	_spawn_rotation = yaw
+
+
+func _push_rigid_bodies() -> void:
+	# Push any RigidBody3D we collided with
+	for i in get_slide_collision_count():
+		var collision := get_slide_collision(i)
+		var collider := collision.get_collider()
+		
+		if collider is RigidBody3D:
+			var rigid := collider as RigidBody3D
+			# Check if it's frozen (not pushable)
+			if rigid.freeze:
+				continue
+			
+			# Don't push if already moving fast enough
+			var horizontal_vel := Vector2(rigid.linear_velocity.x, rigid.linear_velocity.z)
+			if horizontal_vel.length() >= max_push_velocity:
+				continue
+			
+			# Apply force in the direction we're moving
+			var push_dir := -collision.get_normal()
+			push_dir.y = 0  # Only push horizontally
+			if push_dir.length_squared() > 0:
+				push_dir = push_dir.normalized()
+				# Use force instead of impulse for smoother pushing
+				# Scale by mass so heavier objects feel heavier
+				rigid.apply_central_force(push_dir * push_force * rigid.mass * 60.0)

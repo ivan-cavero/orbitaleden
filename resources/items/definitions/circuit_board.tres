@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="ItemDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://resources/items/item_definition.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+id = "circuit_board"
+display_name = "Circuit Board"
+description = "Functional circuit board. Essential for advanced machinery."
+world_mesh = null
+color = Color(0.2, 0.7, 0.3, 1)
+category = 0
+tier = 2
+stack_size = 50
+weight = 0.1
+usable = false
+equippable = false

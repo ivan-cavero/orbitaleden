@@ -184,8 +184,8 @@ orbital_eden/
 - [x] E key triggers interaction
 - [x] Test: Look at object, see highlight and prompt, press E
 
-### 3.2 Item System Resources
-- [ ] `ItemDefinition` resource (`resources/items/item_definition.gd`):
+### 3.2 Item System Resources ✅
+- [x] `ItemDefinition` resource (`resources/items/item_definition.gd`):
   ```
   id: String (unique)
   display_name: String
@@ -199,32 +199,40 @@ orbital_eden/
   usable: bool
   equippable: bool
   ```
-- [ ] `ItemStack` resource:
+- [x] `ItemStack` resource:
   ```
   item: ItemDefinition
   quantity: int
   ```
-- [ ] Create test items (placeholder cube meshes, colored):
+- [x] Create test items (placeholder cube meshes, colored):
   - `scrap_metal` (gray cube) - stack 100
   - `wire_bundle` (orange cube) - stack 100
   - `circuit_board` (green cube) - stack 50
   - `oxygen_canister` (blue cylinder) - stack 10, usable
   - `food_ration` (brown cube) - stack 20, usable
   - `water_bottle` (clear cube) - stack 20, usable
-  - `medkit` (white cube with red cross) - stack 10, usable
-- [ ] **Test assets:** Generate simple colored shapes in Godot (CSGBox/CSGCylinder)
-- [ ] Test: Items load from resources correctly
+  - `medkit` (white cube with red cross) - stack 5, usable
+- [x] **Test assets:** Generated placeholder meshes as PackedScenes (CSGBox/CSGCylinder)
+- [x] Test: Items load from resources correctly (7/7 passed)
 
-### 3.3 World Items (Pickups)
-- [ ] `WorldItem.tscn` - RigidBody3D with:
-  - MeshInstance3D (from ItemDefinition.mesh)
-  - CollisionShape3D (auto-sized to mesh)
-  - In "interactable" group
-  - Shows item name on hover
-- [ ] Interaction picks up item → adds to inventory
-- [ ] Drop item → spawns WorldItem at player position
-- [ ] Physics: items fall, can be pushed
-- [ ] Test: Spawn items in prototype, pick them up
+### 3.3 World Items (Pickups) ✅
+- [x] `WorldItem.tscn` - RigidBody3D with:
+  - MeshInstance3D (colored box based on ItemDefinition.color)
+  - CollisionShape3D (box matching mesh)
+  - In "interactable" group via Interactable component
+  - Shows item name on hover ("Pick up Scrap Metal (x5)")
+- [x] Interaction picks up item → emits signal (inventory in 3.4)
+- [x] Physics: items fall with gravity, can be pushed by player
+- [x] Configurable properties from editor:
+  - `pushable` (bool) - toggle physics interaction
+  - `mass_override` - custom mass (0 = auto from item weight)
+  - `linear_damping_value` / `angular_damping_value` - control sliding/spinning
+  - `mesh_scale` - visual size adjustment
+- [x] Push physics tuned: velocity cap, force-based (not impulse), damping
+- [x] Editor workflow: WorldItems placed in scene, visible and editable
+- [x] Console commands: `spawn <item_id> [qty]`, `items`
+- [x] Test items in prototype scene (EditorItems node)
+- [x] Test: Walk to items, push them, see highlight and prompt, press E to pickup
 
 ### 3.4 Inventory Data
 - [ ] `InventoryData` resource:

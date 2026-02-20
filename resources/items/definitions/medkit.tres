@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="ItemDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://resources/items/item_definition.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+id = "medkit"
+display_name = "Medkit"
+description = "Standard medical kit. Restores 75 health."
+world_mesh = null
+color = Color(0.95, 0.95, 0.95, 1)
+category = 1
+tier = 2
+stack_size = 5
+weight = 1.0
+usable = true
+equippable = false
+restore_health = 75.0
+restore_oxygen = 0.0
+restore_hunger = 0.0
+restore_thirst = 0.0

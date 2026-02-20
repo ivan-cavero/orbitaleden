@@ -1,6 +1,15 @@
-[gd_scene load_steps=9 format=3 uid="uid://c6xtqkp8xnkl0"]
+[gd_scene load_steps=18 format=3 uid="uid://c6xtqkp8xnkl0"]
 
 [ext_resource type="Script" path="res://entities/interactable/interactable.gd" id="1_interactable"]
+[ext_resource type="Script" path="res://prototype/prototype.gd" id="2_prototype"]
+[ext_resource type="PackedScene" path="res://entities/world_item/world_item.tscn" id="3_world_item"]
+[ext_resource type="Resource" path="res://resources/items/definitions/scrap_metal.tres" id="4_scrap_metal"]
+[ext_resource type="Resource" path="res://resources/items/definitions/circuit_board.tres" id="5_circuit_board"]
+[ext_resource type="Resource" path="res://resources/items/definitions/medkit.tres" id="6_medkit"]
+[ext_resource type="Resource" path="res://resources/items/definitions/wire_bundle.tres" id="7_wire_bundle"]
+[ext_resource type="Resource" path="res://resources/items/definitions/oxygen_canister.tres" id="8_oxygen_canister"]
+[ext_resource type="Resource" path="res://resources/items/definitions/food_ration.tres" id="9_food_ration"]
+[ext_resource type="Resource" path="res://resources/items/definitions/water_bottle.tres" id="10_water_bottle"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_1"]
 sky_top_color = Color(0.0509804, 0.0509804, 0.152941, 1)
@@ -34,6 +43,7 @@ material = SubResource("StandardMaterial3D_blue")
 size = Vector3(0.8, 0.8, 0.8)
 
 [node name="Prototype" type="Node3D"]
+script = ExtResource("2_prototype")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_1")
@@ -112,3 +122,47 @@ highlight_color = Color(1, 1, 0.3, 1)
 use_state_colors = true
 color_inactive = Color(0.3, 0.3, 0.3, 1)
 color_active = Color(0.9, 0.8, 0.1, 1)
+
+[node name="EditorItems" type="Node3D" parent="."]
+
+[node name="ScrapMetal1" parent="EditorItems" instance=ExtResource("3_world_item")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0.5, 0)
+item_definition = ExtResource("4_scrap_metal")
+quantity = 3
+
+[node name="ScrapMetal2" parent="EditorItems" instance=ExtResource("3_world_item")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.5, 0.5, 0.5)
+item_definition = ExtResource("4_scrap_metal")
+quantity = 2
+
+[node name="CircuitBoard" parent="EditorItems" instance=ExtResource("3_world_item")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0.5, -2)
+item_definition = ExtResource("5_circuit_board")
+
+[node name="Medkit" parent="EditorItems" instance=ExtResource("3_world_item")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0.5, -3)
+item_definition = ExtResource("6_medkit")
+
+[node name="StaticScrap" parent="EditorItems" instance=ExtResource("3_world_item")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.15, -2)
+item_definition = ExtResource("4_scrap_metal")
+quantity = 10
+pushable = false
+
+[node name="WireBundle" parent="EditorItems" instance=ExtResource("3_world_item")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 0.5, -1)
+item_definition = ExtResource("7_wire_bundle")
+quantity = 2
+
+[node name="OxygenCanister" parent="EditorItems" instance=ExtResource("3_world_item")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0.5, -2)
+item_definition = ExtResource("8_oxygen_canister")
+
+[node name="FoodRation" parent="EditorItems" instance=ExtResource("3_world_item")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 0.5, -1)
+item_definition = ExtResource("9_food_ration")
+quantity = 2
+
+[node name="WaterBottle" parent="EditorItems" instance=ExtResource("3_world_item")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.5, 0.5, -1.5)
+item_definition = ExtResource("10_water_bottle")

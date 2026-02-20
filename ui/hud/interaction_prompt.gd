@@ -54,9 +54,14 @@ func _update_prompt() -> void:
 		_panel.visible = false
 		return
 	
-	var target := _player_interaction.current_target
+	# Get target and validate it's not freed
+	var target = _player_interaction.current_target
 	
-	if not _is_valid_target(target):
+	if not is_instance_valid(target):
+		_panel.visible = false
+		return
+	
+	if not target.enabled:
 		_panel.visible = false
 		return
 	
@@ -70,5 +75,11 @@ func _update_prompt() -> void:
 	_panel.visible = true
 
 
-func _is_valid_target(target: Node) -> bool:
-	return target != null and target.enabled
+func _is_valid_target(target) -> bool:
+	if target == null:
+		return false
+	if not is_instance_valid(target):
+		return false
+	if target.is_queued_for_deletion():
+		return false
+	return target.enabled
