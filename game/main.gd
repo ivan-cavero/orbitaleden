@@ -4,15 +4,20 @@ extends Node3D
 
 const PLAYER_SCENE: PackedScene = preload("res://entities/player/player.tscn")
 const CHEAT_INDICATOR_SCENE: PackedScene = preload("res://ui/hud/cheat_indicator.tscn")
+const INTERACTION_PROMPT_SCENE: PackedScene = preload("res://ui/hud/interaction_prompt.tscn")
 
 # Using Node type to avoid class_name load-order issues; cast at usage sites.
 var _player: Node
 var _cheat_indicator: Node
+var _interaction_prompt: Node
 
 
 func _ready() -> void:
 	_cheat_indicator = CHEAT_INDICATOR_SCENE.instantiate()
 	add_child(_cheat_indicator)
+	
+	_interaction_prompt = INTERACTION_PROMPT_SCENE.instantiate()
+	add_child(_interaction_prompt)
 
 	_spawn_player()
 	_register_commands()
@@ -34,6 +39,11 @@ func _spawn_player() -> void:
 		Debug.warn("No SpawnPoint found — player placed at origin")
 
 	_player.cheat_mode_changed.connect(_on_cheat_mode_changed)
+	
+	# Setup interaction prompt
+	var interaction: Node = _player.get_node_or_null("Interaction")
+	if interaction:
+		_interaction_prompt.setup(interaction)
 
 
 func _find_spawn_point() -> Marker3D:

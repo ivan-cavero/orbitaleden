@@ -170,16 +170,19 @@ orbital_eden/
 
 **Goal:** Player can interact with objects and manage inventory.
 
-### 3.1 Interaction System
-- [ ] RayCast3D detects objects in "interactable" group
-- [ ] Highlight system:
-  - Shader-based outline on hover (or color tint)
-  - "Press E to interact" prompt on screen
-- [ ] `Interactable` base class:
+### 3.1 Interaction System ✅
+- [x] RayCast3D detects objects in "interactable" group
+- [x] Highlight system:
+  - Emission tint on hover (configurable color, toggleable per object)
+  - "Press E to interact" prompt on screen (updates in real-time)
+- [x] `Interactable` base class:
   - `interact(player)` virtual method
   - `get_interaction_text()` for custom prompts
-- [ ] E key triggers interaction
-- [ ] Test: Look at object, see highlight and prompt, press E
+  - `interaction_type`: SIMPLE, ACTIVATE, TOGGLE
+  - `single_use`, `show_highlight`, `use_state_colors` all configurable from editor
+  - Signals: `interacted`, `activated`, `deactivated`, `state_changed`
+- [x] E key triggers interaction
+- [x] Test: Look at object, see highlight and prompt, press E
 
 ### 3.2 Item System Resources
 - [ ] `ItemDefinition` resource (`resources/items/item_definition.gd`):

@@ -1,4 +1,6 @@
-[gd_scene load_steps=5 format=3 uid="uid://c6xtqkp8xnkl0"]
+[gd_scene load_steps=9 format=3 uid="uid://c6xtqkp8xnkl0"]
+
+[ext_resource type="Script" path="res://entities/interactable/interactable.gd" id="1_interactable"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_1"]
 sky_top_color = Color(0.0509804, 0.0509804, 0.152941, 1)
@@ -17,9 +19,19 @@ ambient_light_color = Color(0.3, 0.35, 0.4, 1)
 ambient_light_energy = 0.3
 tonemap_mode = 2
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1"]
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_floor"]
 albedo_color = Color(0.3, 0.3, 0.35, 1)
 uv1_scale = Vector3(50, 50, 50)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_blue"]
+albedo_color = Color(0.3, 0.4, 0.7, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_cube"]
+size = Vector3(0.8, 0.8, 0.8)
+material = SubResource("StandardMaterial3D_blue")
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_cube"]
+size = Vector3(0.8, 0.8, 0.8)
 
 [node name="Prototype" type="Node3D"]
 
@@ -36,7 +48,7 @@ shadow_enabled = true
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
 use_collision = true
 size = Vector3(100, 1, 100)
-material = SubResource("StandardMaterial3D_1")
+material = SubResource("StandardMaterial3D_floor")
 
 [node name="SpawnPoint" type="Marker3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
@@ -45,3 +57,58 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 1, 5)
 use_collision = true
 size = Vector3(2, 2, 2)
+
+[node name="SimpleCube" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0.4, 2)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="SimpleCube"]
+mesh = SubResource("BoxMesh_cube")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="SimpleCube"]
+shape = SubResource("BoxShape3D_cube")
+
+[node name="Interactable" type="Node" parent="SimpleCube"]
+script = ExtResource("1_interactable")
+interaction_type = 0
+interaction_text = "Inspect Cube"
+highlight_color = Color(0.2, 0.6, 1, 1)
+
+[node name="ActivateButton" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0.15, 2)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="ActivateButton"]
+mesh = SubResource("BoxMesh_cube")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ActivateButton"]
+shape = SubResource("BoxShape3D_cube")
+
+[node name="Interactable" type="Node" parent="ActivateButton"]
+script = ExtResource("1_interactable")
+interaction_type = 1
+text_activate = "Press Button"
+single_use = true
+show_highlight = true
+highlight_color = Color(1, 0.5, 0.2, 1)
+use_state_colors = true
+color_inactive = Color(0.5, 0.2, 0.2, 1)
+color_active = Color(0.2, 0.9, 0.3, 1)
+
+[node name="ToggleSwitch" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.15, 3)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="ToggleSwitch"]
+mesh = SubResource("BoxMesh_cube")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ToggleSwitch"]
+shape = SubResource("BoxShape3D_cube")
+
+[node name="Interactable" type="Node" parent="ToggleSwitch"]
+script = ExtResource("1_interactable")
+interaction_type = 2
+text_activate = "Turn On"
+text_deactivate = "Turn Off"
+show_highlight = true
+highlight_color = Color(1, 1, 0.3, 1)
+use_state_colors = true
+color_inactive = Color(0.3, 0.3, 0.3, 1)
+color_active = Color(0.9, 0.8, 0.1, 1)

@@ -1,6 +1,7 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://entities/player/player_controller.gd" id="1_player"]
+[ext_resource type="Script" path="res://entities/player/player_interaction.gd" id="2_interaction"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_1"]
 radius = 0.5
@@ -36,4 +37,7 @@ current = true
 
 [node name="RayCast3D" type="RayCast3D" parent="Head"]
 target_position = Vector3(0, 0, -3)
+
+[node name="Interaction" type="Node" parent="."]
+script = ExtResource("2_interaction")
 
