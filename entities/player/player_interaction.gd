@@ -62,8 +62,20 @@ func _physics_process(_delta: float) -> void:
 
 
 func _input(event: InputEvent) -> void:
+	if _is_ui_blocking():
+		return
 	if event.is_action_pressed("interact"):
 		_try_interact()
+
+
+func _is_ui_blocking() -> bool:
+	if is_instance_valid(Debug.console) and Debug.console.is_open():
+		return true
+	var inv_nodes := get_tree().get_nodes_in_group("inventory_ui")
+	for node in inv_nodes:
+		if node.has_method("is_open") and node.is_open():
+			return true
+	return false
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Setup

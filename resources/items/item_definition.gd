@@ -2,8 +2,9 @@ class_name ItemDefinition
 extends Resource
 ## Defines the properties of an item type.
 ##
-## Create instances of this resource for each unique item in the game.
-## Items can be materials, consumables, equipment, etc.
+## Create one .tres resource per unique item in res://resources/items/definitions/.
+## The ItemDatabase autoload will register it automatically at runtime.
+## All fields are configurable from the Godot Inspector.
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Enums
@@ -25,11 +26,29 @@ enum Tier {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Category Display Names (static lookup)
+# ─────────────────────────────────────────────────────────────────────────────
+
+## Human-readable names indexed by Category enum value.
+const CATEGORY_NAMES: Dictionary = {
+	Category.MATERIAL:   "Material",
+	Category.CONSUMABLE: "Consumable",
+	Category.TOOL:       "Tool",
+	Category.EQUIPMENT:  "Equipment",
+	Category.BUILDABLE:  "Buildable",
+}
+
+## Returns the display name for a Category enum value.
+static func get_category_name(cat: Category) -> String:
+	return CATEGORY_NAMES.get(cat, "Unknown")
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Exports - Identity
 # ─────────────────────────────────────────────────────────────────────────────
 
 @export_group("Identity")
-## Unique identifier (e.g., "scrap_metal", "medkit")
+## Unique identifier (e.g., "scrap_metal", "medkit").
+## Must match the .tres filename (without extension).
 @export var id: String = ""
 ## Display name shown in UI
 @export var display_name: String = ""
@@ -41,11 +60,11 @@ enum Tier {
 # ─────────────────────────────────────────────────────────────────────────────
 
 @export_group("Visuals")
-## Icon for inventory UI (recommended 64x64)
+## Icon for inventory / hotbar (recommended 64x64)
 @export var icon: Texture2D
-## 3D mesh scene for world display
+## 3D mesh scene for world display (dropped items, held items)
 @export var world_mesh: PackedScene
-## Color tint for placeholder meshes
+## Color tint used for placeholder icons when no icon is assigned
 @export var color: Color = Color.WHITE
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -53,9 +72,9 @@ enum Tier {
 # ─────────────────────────────────────────────────────────────────────────────
 
 @export_group("Properties")
-## Item category
+## Item category (determines available actions and sorting)
 @export var category: Category = Category.MATERIAL
-## Tech tier (affects when it's available)
+## Tech tier (affects when it becomes available)
 @export var tier: Tier = Tier.TIER_1
 ## Maximum stack size (1 = not stackable)
 @export_range(1, 999) var stack_size: int = 99
@@ -67,13 +86,16 @@ enum Tier {
 # ─────────────────────────────────────────────────────────────────────────────
 
 @export_group("Usage")
-## Can be used/consumed directly
+## Can be used/consumed from the inventory (right-click menu)
 @export var usable: bool = false
-## Can be equipped in equipment slot
+## Label shown on the context-menu "Use" button (e.g. "Eat", "Drink", "Apply").
+## Leave empty to use the default "Use".
+@export var use_action_label: String = ""
+## Can be equipped in an equipment slot
 @export var equippable: bool = false
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Exports - Consumable Effects (if usable)
+# Exports - Consumable Effects
 # ─────────────────────────────────────────────────────────────────────────────
 
 @export_group("Consumable Effects")
@@ -89,6 +111,14 @@ enum Tier {
 # ─────────────────────────────────────────────────────────────────────────────
 # Methods
 # ─────────────────────────────────────────────────────────────────────────────
+
+## Returns the action label for the "Use" button in the context menu.
+## Falls back to "Use" when no custom label is set.
+func get_use_label() -> String:
+	if not use_action_label.is_empty():
+		return use_action_label
+	return "Use"
+
 
 ## Returns true if this item has any restorative effects.
 func has_consumable_effects() -> bool:

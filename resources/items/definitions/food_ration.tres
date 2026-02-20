@@ -14,6 +14,7 @@ tier = 1
 stack_size = 20
 weight = 0.3
 usable = true
+use_action_label = "Eat"
 equippable = false
 restore_health = 0.0
 restore_oxygen = 0.0

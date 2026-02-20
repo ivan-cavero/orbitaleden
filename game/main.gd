@@ -5,11 +5,13 @@ extends Node3D
 const PLAYER_SCENE: PackedScene = preload("res://entities/player/player.tscn")
 const CHEAT_INDICATOR_SCENE: PackedScene = preload("res://ui/hud/cheat_indicator.tscn")
 const INTERACTION_PROMPT_SCENE: PackedScene = preload("res://ui/hud/interaction_prompt.tscn")
+const INVENTORY_UI_SCENE: PackedScene = preload("res://ui/inventory/inventory_ui.tscn")
 
 # Using Node type to avoid class_name load-order issues; cast at usage sites.
 var _player: Node
 var _cheat_indicator: Node
 var _interaction_prompt: Node
+var _inventory_ui: InventoryUI
 
 
 func _ready() -> void:
@@ -19,8 +21,20 @@ func _ready() -> void:
 	_interaction_prompt = INTERACTION_PROMPT_SCENE.instantiate()
 	add_child(_interaction_prompt)
 
+	_inventory_ui = INVENTORY_UI_SCENE.instantiate()
+	add_child(_inventory_ui)
+
 	_spawn_player()
 	_register_commands()
+
+
+func _input(event: InputEvent) -> void:
+	# Toggle inventory with Tab (only when console is closed)
+	if event.is_action_pressed("toggle_inventory"):
+		if is_instance_valid(Debug.console) and Debug.console.is_open():
+			return
+		_inventory_ui.toggle()
+		get_viewport().set_input_as_handled()
 
 
 func _spawn_player() -> void:
@@ -44,6 +58,11 @@ func _spawn_player() -> void:
 	var interaction: Node = _player.get_node_or_null("Interaction")
 	if interaction:
 		_interaction_prompt.setup(interaction)
+
+	# Setup inventory UI
+	var inventory_node: Node = _player.get_node_or_null("Inventory")
+	if inventory_node and inventory_node.inventory:
+		_inventory_ui.setup(inventory_node.inventory)
 
 
 func _find_spawn_point() -> Marker3D:
@@ -169,12 +188,7 @@ func _cmd_spawn(args: Array[String]) -> void:
 
 
 func _cmd_items(_args: Array[String]) -> void:
-	var prototype: Node = get_node_or_null("Prototype")
-	if not prototype or not prototype.has_method("get_item_ids"):
-		Debug.error("No prototype scene with item support")
-		return
-	
-	var ids: Array = prototype.get_item_ids()
+	var ids := ItemDatabase.get_item_ids()
 	Debug.info("Available items: %s" % ", ".join(ids))
 
 
@@ -205,15 +219,7 @@ func _cmd_give(args: Array[String]) -> void:
 	if not is_instance_valid(p):
 		return
 	
-	# Load item definition
-	var prototype: Node = get_node_or_null("Prototype")
-	if not prototype:
-		Debug.error("No prototype scene")
-		return
-	
-	var item_path := "res://resources/items/definitions/%s.tres" % item_id
-	var item_def: Resource = load(item_path)
-	
+	var item_def := ItemDatabase.get_item(item_id)
 	if not item_def:
 		Debug.error("Unknown item: %s (use 'items' to list)" % item_id)
 		return

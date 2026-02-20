@@ -128,7 +128,14 @@ func _physics_process(delta: float) -> void:
 
 
 func _is_ui_blocking() -> bool:
-	return is_instance_valid(Debug.console) and Debug.console.is_open()
+	if is_instance_valid(Debug.console) and Debug.console.is_open():
+		return true
+	# Check for open inventory UI
+	var inv_nodes := get_tree().get_nodes_in_group("inventory_ui")
+	for node in inv_nodes:
+		if node.has_method("is_open") and node.is_open():
+			return true
+	return false
 
 
 # ── Movement modes ────────────────────────────────────────────────────────────

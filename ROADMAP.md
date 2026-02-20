@@ -262,16 +262,16 @@ orbital_eden/
   - `give <item_id> [quantity]` - add items directly
 - [x] Test: Pickup items, use `inv` and `give` commands
 
-### 3.5 Inventory UI
-- [ ] `InventoryUI.tscn` - CanvasLayer:
+### 3.5 Inventory UI ✅
+- [x] `InventoryUI.tscn` - CanvasLayer:
   - Grid of slot buttons (6 columns x 5 rows = 30 slots)
   - Each slot shows: item icon, quantity, tooltip on hover
   - Drag and drop between slots
   - Right-click to split stack
   - Close button or press Tab/Escape
-- [ ] Toggle with Tab key
-- [ ] Mouse visible when inventory open
-- [ ] Test: Open inventory, see items, drag between slots
+- [x] Toggle with Tab key
+- [x] Mouse visible when inventory open
+- [x] Test: Open inventory, see items, drag between slots
 
 ### 3.6 Hotbar
 - [ ] 8-slot hotbar at bottom center of screen
