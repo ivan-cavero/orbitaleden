@@ -1,0 +1,10 @@
+[gd_scene load_steps=3 format=3 uid="uid://bm5x3qh7jya1c"]
+
+[ext_resource type="PackedScene" uid="uid://c6xtqkp8xnkl0" path="res://prototype/prototype.tscn" id="1_proto"]
+[ext_resource type="Script" path="res://game/main.gd" id="2_main"]
+
+[node name="Main" type="Node3D"]
+script = ExtResource("2_main")
+
+[node name="Prototype" parent="." instance=ExtResource("1_proto")]
+

@@ -1,0 +1,17 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+     "godot": {
+      "type": "local",
+      "command": [
+        "node",
+        "C:\\Users\\ivang\\Documents\\Godot\\mcp\\build\\index.js"
+      ],
+      "enabled": true,
+      "environment": {
+        "DEBUG": "true",
+        "GODOT_PATH": "C:\\Users\\ivang\\Documents\\Godot\\Godot.exe"
+      }
+    }
+  }
+}
