@@ -26,13 +26,17 @@ signal pickup_failed(item: Resource, quantity: int)
 # ─────────────────────────────────────────────────────────────────────────────
 
 @export var inventory_size: int = 30
+@export var hotbar_size: int = 8
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Public Variables
 # ─────────────────────────────────────────────────────────────────────────────
 
-## The inventory data resource.
+## The main inventory data resource.
 var inventory: Resource
+
+## The hotbar data resource (separate 8-slot inventory).
+var hotbar: Resource
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Lifecycle
@@ -42,6 +46,10 @@ func _ready() -> void:
 	inventory = InventoryDataScript.new()
 	inventory.max_slots = inventory_size
 	inventory._initialize_slots()
+	
+	hotbar = InventoryDataScript.new()
+	hotbar.max_slots = hotbar_size
+	hotbar._initialize_slots()
 	
 	# Connect to inventory changes for debugging
 	inventory.inventory_changed.connect(_on_inventory_changed)

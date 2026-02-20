@@ -6,12 +6,14 @@ const PLAYER_SCENE: PackedScene = preload("res://entities/player/player.tscn")
 const CHEAT_INDICATOR_SCENE: PackedScene = preload("res://ui/hud/cheat_indicator.tscn")
 const INTERACTION_PROMPT_SCENE: PackedScene = preload("res://ui/hud/interaction_prompt.tscn")
 const INVENTORY_UI_SCENE: PackedScene = preload("res://ui/inventory/inventory_ui.tscn")
+const HOTBAR_UI_SCENE: PackedScene = preload("res://ui/hud/hotbar_ui.tscn")
 
 # Using Node type to avoid class_name load-order issues; cast at usage sites.
 var _player: Node
 var _cheat_indicator: Node
 var _interaction_prompt: Node
 var _inventory_ui: InventoryUI
+var _hotbar_ui: Node
 
 
 func _ready() -> void:
@@ -23,6 +25,9 @@ func _ready() -> void:
 
 	_inventory_ui = INVENTORY_UI_SCENE.instantiate()
 	add_child(_inventory_ui)
+
+	_hotbar_ui = HOTBAR_UI_SCENE.instantiate()
+	add_child(_hotbar_ui)
 
 	_spawn_player()
 	_register_commands()
@@ -63,6 +68,11 @@ func _spawn_player() -> void:
 	var inventory_node: Node = _player.get_node_or_null("Inventory")
 	if inventory_node and inventory_node.inventory:
 		_inventory_ui.setup(inventory_node.inventory)
+
+	# Setup hotbar
+	if inventory_node and inventory_node.hotbar:
+		_hotbar_ui.setup(inventory_node.hotbar)
+		_inventory_ui.setup_hotbar(_hotbar_ui, inventory_node.hotbar)
 
 
 func _find_spawn_point() -> Marker3D:

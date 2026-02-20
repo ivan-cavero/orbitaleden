@@ -5,11 +5,12 @@ extends CanvasLayer
 ## Features:
 ## - Toggle with Tab / Escape
 ## - Drag and drop items between slots
+## - Cross-UI drag between inventory and hotbar
 ## - Right-click context menu (Use, Discard, etc.)
 ## - Shift+Right-click split menu with slider and presets
-## - Tooltip on hover
+## - Tooltip on hover (inventory slots and hotbar slots)
 ## - Sort inventory button
-## - Visual drag preview following the cursor
+## - Visual drag preview following the cursor (on overlay layer 30)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Signals
@@ -41,6 +42,7 @@ var _inventory_data: InventoryData = null
 # Drag state
 var _dragging := false
 var _drag_from_index := -1
+var _drag_from_hotbar := false  # True if drag originated from hotbar
 var _drag_stack: ItemStack = null
 var _drag_handled := false  # Set true when a slot handles the drop
 var _drag_just_started := false  # Ignore the mouse-up from the click that started the drag
@@ -65,6 +67,11 @@ var _tooltip_name: Label
 var _tooltip_desc: Label
 var _tooltip_info: Label
 var _drag_preview: TextureRect
+var _overlay_layer: CanvasLayer  # Layer above hotbar for drag preview, tooltips, popups
+
+# Hotbar integration
+var _hotbar_ui: Node = null  # HotbarUI reference
+var _hotbar_data: InventoryData = null
 
 # Context menu refs
 var _context_menu: PanelContainer
@@ -150,6 +157,8 @@ func open() -> void:
 	_show_all()
 	_refresh_all_slots()
 	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+	if _hotbar_ui and _hotbar_ui.has_method("set_inventory_open"):
+		_hotbar_ui.set_inventory_open(true)
 	inventory_toggled.emit(true)
 	Debug.info("Inventory opened")
 
@@ -165,6 +174,8 @@ func close() -> void:
 	_hide_all()
 	_hide_tooltip()
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+	if _hotbar_ui and _hotbar_ui.has_method("set_inventory_open"):
+		_hotbar_ui.set_inventory_open(false)
 	inventory_toggled.emit(false)
 	Debug.info("Inventory closed")
 
@@ -191,6 +202,16 @@ func setup(inventory_data: InventoryData) -> void:
 	if _open:
 		_refresh_all_slots()
 
+
+## Connects the hotbar for cross-UI drag-and-drop.
+func setup_hotbar(hotbar_ui: Node, hotbar_data: InventoryData) -> void:
+	_hotbar_ui = hotbar_ui
+	_hotbar_data = hotbar_data
+	# Connect hotbar slot signals for cross-UI drag
+	_hotbar_ui.hotbar_slot_clicked.connect(_on_hotbar_slot_clicked)
+	_hotbar_ui.hotbar_slot_right_clicked.connect(_on_hotbar_slot_right_clicked)
+	_hotbar_ui.hotbar_slot_hovered.connect(_on_hotbar_slot_hovered)
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Build UI
 # ─────────────────────────────────────────────────────────────────────────────
@@ -198,6 +219,7 @@ func setup(inventory_data: InventoryData) -> void:
 func _build_ui() -> void:
 	_build_background()
 	_build_main_panel()
+	_build_overlay_layer()
 	_build_tooltip()
 	_build_drag_preview()
 	_build_context_menu()
@@ -307,12 +329,20 @@ func _build_main_panel() -> void:
 		_slots.append(slot)
 
 
+func _build_overlay_layer() -> void:
+	# Separate CanvasLayer for drag preview, tooltips, and popup menus.
+	# Sits above the hotbar (layer 25) so floating elements are never occluded.
+	_overlay_layer = CanvasLayer.new()
+	_overlay_layer.layer = 30
+	_overlay_layer.process_mode = Node.PROCESS_MODE_ALWAYS
+	add_child(_overlay_layer)
+
+
 func _build_tooltip() -> void:
 	_tooltip_panel = PanelContainer.new()
 	_tooltip_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_tooltip_panel.visible = false
-	_tooltip_panel.z_index = 100
-	add_child(_tooltip_panel)
+	_overlay_layer.add_child(_tooltip_panel)
 
 	var tip_style := StyleBoxFlat.new()
 	tip_style.bg_color = Color(0.05, 0.05, 0.08, 0.95)
@@ -353,16 +383,14 @@ func _build_drag_preview() -> void:
 	_drag_preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_drag_preview.modulate.a = 0.7
 	_drag_preview.visible = false
-	_drag_preview.z_index = 200
-	add_child(_drag_preview)
+	_overlay_layer.add_child(_drag_preview)
 
 
 func _build_context_menu() -> void:
 	_context_menu = PanelContainer.new()
 	_context_menu.mouse_filter = Control.MOUSE_FILTER_STOP
 	_context_menu.visible = false
-	_context_menu.z_index = 150
-	add_child(_context_menu)
+	_overlay_layer.add_child(_context_menu)
 
 	var ctx_style := StyleBoxFlat.new()
 	ctx_style.bg_color = Color(0.1, 0.1, 0.13, 0.97)
@@ -381,8 +409,7 @@ func _build_split_menu() -> void:
 	_split_menu = PanelContainer.new()
 	_split_menu.mouse_filter = Control.MOUSE_FILTER_STOP
 	_split_menu.visible = false
-	_split_menu.z_index = 150
-	add_child(_split_menu)
+	_overlay_layer.add_child(_split_menu)
 
 	var split_style := StyleBoxFlat.new()
 	split_style.bg_color = Color(0.1, 0.1, 0.13, 0.97)
@@ -484,10 +511,12 @@ func _build_split_menu() -> void:
 
 func _show_all() -> void:
 	_bg.visible = true
+	_overlay_layer.visible = true
 
 
 func _hide_all() -> void:
 	_bg.visible = false
+	_overlay_layer.visible = false
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Slot Refresh
@@ -817,6 +846,7 @@ func _start_drag(slot_index: int) -> void:
 
 	_dragging = true
 	_drag_from_index = slot_index
+	_drag_from_hotbar = false
 	_drag_stack = stack.duplicate_stack()
 	_drag_just_started = true
 
@@ -853,45 +883,47 @@ func _drop_on_slot(target_index: int) -> void:
 		_inventory_data.slot_changed.emit(target_index)
 		_inventory_data.inventory_changed.emit()
 		if leftover and not leftover.is_empty():
-			# Put leftover back in source slot
-			_inventory_data.set_slot(_drag_from_index, leftover)
+			# Put leftover back in source
+			_return_drag_leftover(leftover)
 	else:
 		# Different item: swap
 		_inventory_data.set_slot(target_index, _drag_stack)
-		_inventory_data.set_slot(_drag_from_index, target_stack)
+		_return_drag_leftover(target_stack)
 
 	_finish_drag()
 
 
 func _end_drag_outside() -> void:
 	# Dropped outside any slot — return to original position
-	if _dragging and _inventory_data:
-		# Try to merge back into the source slot if it now has items of the same type
-		var source_stack := _inventory_data.get_slot(_drag_from_index)
-		if source_stack and not source_stack.is_empty() and source_stack.item == _drag_stack.item:
-			var leftover := source_stack.merge_from(_drag_stack)
-			_inventory_data.slot_changed.emit(_drag_from_index)
-			_inventory_data.inventory_changed.emit()
-			if leftover and not leftover.is_empty():
-				# Find an empty slot for the leftover
-				var empty := _inventory_data.find_empty_slot()
-				if empty >= 0:
-					_inventory_data.set_slot(empty, leftover)
-				# If no empty slot, items are lost (shouldn't happen normally)
-		else:
-			_inventory_data.set_slot(_drag_from_index, _drag_stack)
+	if _dragging:
+		var source_data: InventoryData = _hotbar_data if _drag_from_hotbar else _inventory_data
+		if source_data:
+			var source_stack := source_data.get_slot(_drag_from_index)
+			if source_stack and not source_stack.is_empty() and source_stack.item == _drag_stack.item:
+				var leftover := source_stack.merge_from(_drag_stack)
+				source_data.slot_changed.emit(_drag_from_index)
+				source_data.inventory_changed.emit()
+				if leftover and not leftover.is_empty():
+					var empty := source_data.find_empty_slot()
+					if empty >= 0:
+						source_data.set_slot(empty, leftover)
+			else:
+				source_data.set_slot(_drag_from_index, _drag_stack)
 	_finish_drag()
 
 
 func _cancel_drag() -> void:
-	if _dragging and _inventory_data:
-		_inventory_data.set_slot(_drag_from_index, _drag_stack)
+	if _dragging:
+		var source_data: InventoryData = _hotbar_data if _drag_from_hotbar else _inventory_data
+		if source_data:
+			source_data.set_slot(_drag_from_index, _drag_stack)
 	_finish_drag()
 
 
 func _finish_drag() -> void:
 	_dragging = false
 	_drag_from_index = -1
+	_drag_from_hotbar = false
 	_drag_stack = null
 	_drag_handled = false
 	_drag_just_started = false
@@ -1077,6 +1109,150 @@ func _create_drag_placeholder() -> Texture2D:
 		color.a = 0.6
 	img.fill(color)
 	return ImageTexture.create_from_image(img)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Hotbar Cross-Drag Integration
+# ─────────────────────────────────────────────────────────────────────────────
+
+func _on_hotbar_slot_clicked(hotbar_index: int) -> void:
+	if not _open:
+		return
+	_hide_context_menu()
+	_hide_split_menu()
+	if _dragging:
+		_drop_on_hotbar_slot(hotbar_index)
+	else:
+		_start_drag_from_hotbar(hotbar_index)
+
+
+func _on_hotbar_slot_right_clicked(hotbar_index: int) -> void:
+	if not _open:
+		return
+	if _dragging:
+		_place_one_item_hotbar(hotbar_index)
+
+
+func _on_hotbar_slot_hovered(hotbar_index: int) -> void:
+	if not _open or _dragging or _context_menu.visible or _split_menu.visible:
+		return
+	_show_tooltip_for_hotbar(hotbar_index)
+
+
+func _start_drag_from_hotbar(hotbar_index: int) -> void:
+	if not _hotbar_data:
+		return
+
+	var stack := _hotbar_data.get_slot(hotbar_index)
+	if stack == null or stack.is_empty():
+		return
+
+	_dragging = true
+	_drag_from_index = hotbar_index
+	_drag_from_hotbar = true
+	_drag_stack = stack.duplicate_stack()
+	_drag_just_started = true
+
+	# Remove from hotbar visually
+	_hotbar_data.clear_slot(hotbar_index)
+
+	# Show drag preview
+	if _drag_stack.item and _drag_stack.item.icon:
+		_drag_preview.texture = _drag_stack.item.icon
+	else:
+		_drag_preview.texture = _create_drag_placeholder()
+	_drag_preview.visible = true
+	_update_drag_preview_position()
+	_hide_tooltip()
+
+
+func _drop_on_hotbar_slot(hotbar_index: int) -> void:
+	if not _dragging or not _hotbar_data:
+		return
+
+	_drag_handled = true
+
+	var target_stack := _hotbar_data.get_slot(hotbar_index)
+
+	if target_stack == null or target_stack.is_empty():
+		# Empty slot: place the dragged stack
+		_hotbar_data.set_slot(hotbar_index, _drag_stack)
+	elif target_stack.item == _drag_stack.item:
+		# Same item: try to merge
+		var leftover := target_stack.merge_from(_drag_stack)
+		_hotbar_data.slot_changed.emit(hotbar_index)
+		_hotbar_data.inventory_changed.emit()
+		if leftover and not leftover.is_empty():
+			# Put leftover back in source
+			_return_drag_leftover(leftover)
+	else:
+		# Different item: swap
+		_hotbar_data.set_slot(hotbar_index, _drag_stack)
+		# Put old target item back in source
+		_return_drag_leftover(target_stack)
+
+	_finish_drag()
+
+
+func _place_one_item_hotbar(hotbar_index: int) -> void:
+	## While dragging, right-click places exactly 1 item in a hotbar slot.
+	if not _dragging or not _hotbar_data or not _drag_stack:
+		return
+
+	var target_stack := _hotbar_data.get_slot(hotbar_index)
+
+	if target_stack == null or target_stack.is_empty():
+		var one := ItemStack.create(_drag_stack.item, 1)
+		_hotbar_data.set_slot(hotbar_index, one)
+		_drag_stack.quantity -= 1
+	elif target_stack.item == _drag_stack.item and not target_stack.is_full():
+		target_stack.add(1)
+		_hotbar_data.slot_changed.emit(hotbar_index)
+		_hotbar_data.inventory_changed.emit()
+		_drag_stack.quantity -= 1
+	else:
+		return  # Can't place here
+
+	if _drag_stack.quantity <= 0:
+		_finish_drag()
+	else:
+		_refresh_all_slots()
+
+
+func _return_drag_leftover(leftover: ItemStack) -> void:
+	## Puts a leftover stack back into the source (inventory or hotbar).
+	if _drag_from_hotbar:
+		_hotbar_data.set_slot(_drag_from_index, leftover)
+	else:
+		_inventory_data.set_slot(_drag_from_index, leftover)
+
+
+func _show_tooltip_for_hotbar(hotbar_index: int) -> void:
+	if not _hotbar_data:
+		_hide_tooltip()
+		return
+
+	var stack := _hotbar_data.get_slot(hotbar_index)
+	if stack == null or stack.is_empty():
+		_hide_tooltip()
+		return
+
+	var item_def := stack.item
+	_tooltip_name.text = item_def.display_name
+
+	if item_def.description.is_empty():
+		_tooltip_desc.visible = false
+	else:
+		_tooltip_desc.text = item_def.description
+		_tooltip_desc.visible = true
+
+	var info_parts: Array[String] = []
+	info_parts.append(ItemDefinition.get_category_name(item_def.category))
+	info_parts.append("Tier %d" % item_def.tier)
+	info_parts.append("Stack: %d" % item_def.stack_size)
+	_tooltip_info.text = " | ".join(info_parts)
+
+	_tooltip_panel.visible = true
+	_update_tooltip_position()
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Signal Handlers

@@ -273,14 +273,17 @@ orbital_eden/
 - [x] Mouse visible when inventory open
 - [x] Test: Open inventory, see items, drag between slots
 
-### 3.6 Hotbar
-- [ ] 8-slot hotbar at bottom center of screen
-- [ ] Always visible during gameplay
-- [ ] Number keys 1-8 to select slot
-- [ ] Selected slot highlighted
-- [ ] Drag items from inventory to hotbar
-- [ ] Right-click or F to use item in selected slot
-- [ ] Test: Equip item to hotbar, select with number key
+### 3.6 Hotbar ✅
+- [x] 8-slot hotbar at bottom center of screen
+- [x] Always visible during gameplay
+- [x] Number keys 1-8 to select slot
+- [x] Mouse scroll wheel to cycle slots
+- [x] Selected slot highlighted
+- [x] Drag items from inventory to hotbar
+- [x] Right-click or F to use item in selected slot
+- [x] Hotbar layer raises above inventory overlay when inventory is open
+- [x] Drag preview, tooltips, and popups render above hotbar via overlay layer
+- [x] Test: Equip item to hotbar, select with number key, scroll wheel, drag cross-UI
 
 ### 3.7 Item Usage
 - [ ] Items with `usable = true` can be consumed
