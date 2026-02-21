@@ -74,6 +74,10 @@ func _spawn_player() -> void:
 		_hotbar_ui.setup(inventory_node.hotbar)
 		_inventory_ui.setup_hotbar(_hotbar_ui, inventory_node.hotbar)
 
+	# Connect item usage signals so ItemDefinition.use() is called on consumption
+	_inventory_ui.item_used.connect(_on_item_used)
+	_hotbar_ui.item_used.connect(_on_item_used)
+
 
 func _find_spawn_point() -> Marker3D:
 	# Look for any node in the spawn_point group
@@ -246,3 +250,7 @@ func _cmd_give(args: Array[String]) -> void:
 	else:
 		var added := qty - overflow
 		Debug.warn("Added %dx %s (overflow: %d)" % [added, item_def.display_name, overflow])
+
+
+func _on_item_used(item: ItemDefinition, _slot_index: int) -> void:
+	item.use(_player)

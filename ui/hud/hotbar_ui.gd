@@ -25,6 +25,9 @@ signal selection_changed(slot_index: int)
 ## Emitted when a hotbar slot is clicked (for cross-UI drag integration).
 signal hotbar_slot_clicked(slot_index: int)
 
+## Emitted when a hotbar slot is shift+clicked (quick-move to inventory).
+signal hotbar_slot_shift_clicked(slot_index: int)
+
 ## Emitted when a hotbar slot is right-clicked.
 signal hotbar_slot_right_clicked(slot_index: int)
 
@@ -70,9 +73,6 @@ var _slot_icons: Array[TextureRect] = []
 var _slot_quantities: Array[Label] = []
 var _slot_key_labels: Array[Label] = []
 var _slot_highlights: Array[ColorRect] = []
-
-# Placeholder texture cache (shared with InventorySlot)
-static var _placeholder_cache: Dictionary = {}
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Lifecycle
@@ -181,7 +181,6 @@ func use_selected_item() -> void:
 		_hotbar_data.slot_changed.emit(_selected_index)
 		_hotbar_data.inventory_changed.emit()
 
-	Debug.info("Used %s from hotbar" % item_def.display_name)
 
 
 ## Notifies the hotbar whether the inventory UI is open.
@@ -325,7 +324,10 @@ func _on_slot_gui_input(event: InputEvent, index: int) -> void:
 		if mb.pressed:
 			if mb.button_index == MOUSE_BUTTON_LEFT:
 				select_slot(index)
-				hotbar_slot_clicked.emit(index)
+				if mb.shift_pressed:
+					hotbar_slot_shift_clicked.emit(index)
+				else:
+					hotbar_slot_clicked.emit(index)
 				_slot_panels[index].accept_event()
 			elif mb.button_index == MOUSE_BUTTON_RIGHT:
 				select_slot(index)
@@ -367,7 +369,7 @@ func _refresh_slot(index: int) -> void:
 		if stack.item and stack.item.icon:
 			_slot_icons[index].texture = stack.item.icon
 		else:
-			_slot_icons[index].texture = _get_placeholder_texture(stack.item)
+			_slot_icons[index].texture = PlaceholderTextureCache.get_for_item(stack.item)
 
 		if stack.quantity > 1:
 			_slot_quantities[index].text = str(stack.quantity)
@@ -406,25 +408,6 @@ func _update_selection_visuals() -> void:
 			_slot_key_labels[i].add_theme_color_override("font_color", KEY_LABEL_COLOR)
 
 		panel.add_theme_stylebox_override("panel", new_style)
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Placeholder Textures
-# ─────────────────────────────────────────────────────────────────────────────
-
-func _get_placeholder_texture(item: ItemDefinition) -> Texture2D:
-	var color := Color(0.5, 0.5, 0.5, 0.6)
-	if item:
-		color = item.color
-		color.a = 0.6
-
-	if _placeholder_cache.has(color):
-		return _placeholder_cache[color]
-
-	var img := Image.create(48, 48, false, Image.FORMAT_RGBA8)
-	img.fill(color)
-	var tex := ImageTexture.create_from_image(img)
-	_placeholder_cache[color] = tex
-	return tex
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Signal Handlers

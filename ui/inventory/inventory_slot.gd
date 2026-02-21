@@ -12,6 +12,9 @@ extends PanelContainer
 ## Left-click on this slot.
 signal slot_clicked(slot_index: int)
 
+## Shift + left-click on this slot (quick-move to hotbar).
+signal slot_shift_clicked(slot_index: int)
+
 ## Right-click on this slot (context menu).
 signal slot_right_clicked(slot_index: int)
 
@@ -27,9 +30,6 @@ signal slot_hovered(slot_index: int)
 
 const SLOT_SIZE := Vector2(64, 64)
 const ICON_SIZE := Vector2(48, 48)
-
-# Cache of placeholder textures keyed by Color to avoid recreating every refresh.
-static var _placeholder_cache: Dictionary = {}
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Internal State
@@ -64,7 +64,10 @@ func _gui_input(event: InputEvent) -> void:
 		var mb := event as InputEventMouseButton
 		if mb.pressed:
 			if mb.button_index == MOUSE_BUTTON_LEFT:
-				slot_clicked.emit(slot_index)
+				if mb.shift_pressed:
+					slot_shift_clicked.emit(slot_index)
+				else:
+					slot_clicked.emit(slot_index)
 				accept_event()
 			elif mb.button_index == MOUSE_BUTTON_RIGHT:
 				if mb.shift_pressed:
@@ -178,8 +181,7 @@ func _refresh_display() -> void:
 		if _stack.item and _stack.item.icon:
 			_icon.texture = _stack.item.icon
 		else:
-			# Fallback: generate a colored placeholder
-			_icon.texture = _create_placeholder_texture()
+			_icon.texture = PlaceholderTextureCache.get_for_item(_stack.item)
 
 		# Show quantity (hide if 1)
 		if _stack.quantity > 1:
@@ -190,23 +192,6 @@ func _refresh_display() -> void:
 	else:
 		_icon.texture = null
 		_quantity_label.visible = false
-
-
-func _create_placeholder_texture() -> Texture2D:
-	var color := Color(0.5, 0.5, 0.5, 0.6)
-	if _stack and _stack.item:
-		color = _stack.item.color
-		color.a = 0.6
-
-	# Return cached texture if one exists for this color.
-	if _placeholder_cache.has(color):
-		return _placeholder_cache[color]
-
-	var img := Image.create(48, 48, false, Image.FORMAT_RGBA8)
-	img.fill(color)
-	var tex := ImageTexture.create_from_image(img)
-	_placeholder_cache[color] = tex
-	return tex
 
 
 func _update_highlight() -> void:

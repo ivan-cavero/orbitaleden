@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "skills": {
+    "godot-autoload-architecture": {
+      "source": "thedivergentai/gd-agentic-skills",
+      "sourceType": "github",
+      "computedHash": "297d9d13cff427bf2d0eb5b8919bcaca64b8211e504d8520ba00ea94bd523499"
+    },
+    "godot-best-practices": {
+      "source": "jwynia/agent-skills",
+      "sourceType": "github",
+      "computedHash": "f4f741553ed4ad952312e0783f5a63a9755a442b9e8cfe670dd0c85cf273f268"
+    },
+    "godot-gdscript-patterns": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "computedHash": "789f0ffbe5e368b1b1004315f2169cc22d2da7a33b055c0d8be97ef5af0c6efc"
+    },
+    "godot-ui": {
+      "source": "zate/cc-godot",
+      "sourceType": "github",
+      "computedHash": "0ed46667be618a59b0f0072f2a6ed98cbe439c71eb300156ad4158b11a5b2c2d"
+    }
+  }
+}

@@ -80,7 +80,7 @@ func _ready() -> void:
 
 
 func _input(event: InputEvent) -> void:
-	if _is_ui_blocking():
+	if Debug.is_ui_blocking():
 		return
 
 	# Release mouse on Escape
@@ -108,7 +108,7 @@ func _input(event: InputEvent) -> void:
 
 
 func _physics_process(delta: float) -> void:
-	if _is_ui_blocking():
+	if Debug.is_ui_blocking():
 		# Still apply gravity so the player doesn't float
 		if move_mode == MoveMode.NORMAL and not is_on_floor():
 			velocity.y -= GRAVITY * gravity_scale * delta
@@ -125,17 +125,6 @@ func _physics_process(delta: float) -> void:
 
 	_process_crouch(delta)
 	_process_head_bob(delta)
-
-
-func _is_ui_blocking() -> bool:
-	if is_instance_valid(Debug.console) and Debug.console.is_open():
-		return true
-	# Check for open inventory UI
-	var inv_nodes := get_tree().get_nodes_in_group("inventory_ui")
-	for node in inv_nodes:
-		if node.has_method("is_open") and node.is_open():
-			return true
-	return false
 
 
 # ── Movement modes ────────────────────────────────────────────────────────────

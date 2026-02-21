@@ -252,11 +252,11 @@ func _cmd_help(args: Array[String]) -> void:
 			log_err("Unknown: " + cmd)
 
 
-func _cmd_clear(_a: Array[String])     -> void: clear_output()
-func _cmd_quit(_a: Array[String])      -> void: get_tree().quit()
-func _cmd_fps(_a: Array[String])       -> void: log_msg("FPS: %d" % Engine.get_frames_per_second())
+func _cmd_clear(_args: Array[String])     -> void: clear_output()
+func _cmd_quit(_args: Array[String])      -> void: get_tree().quit()
+func _cmd_fps(_args: Array[String])       -> void: log_msg("FPS: %d" % Engine.get_frames_per_second())
 
-func _cmd_wireframe(_a: Array[String]) -> void:
+func _cmd_wireframe(_args: Array[String]) -> void:
 	var vp := get_viewport()
 	if vp.debug_draw == Viewport.DEBUG_DRAW_WIREFRAME:
 		vp.debug_draw = Viewport.DEBUG_DRAW_DISABLED
@@ -272,6 +272,6 @@ func _cmd_timescale(args: Array[String]) -> void:
 	Engine.time_scale = clampf(args[0].to_float(), 0.1, 10.0)
 	log_ok("Timescale: %.2f" % Engine.time_scale)
 
-func _cmd_pause(_a: Array[String]) -> void:
+func _cmd_pause(_args: Array[String]) -> void:
 	get_tree().paused = not get_tree().paused
 	log_ok("Game %s" % ("paused" if get_tree().paused else "resumed"))

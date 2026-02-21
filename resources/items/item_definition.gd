@@ -128,3 +128,19 @@ func has_consumable_effects() -> bool:
 ## Validates that required fields are set.
 func is_valid() -> bool:
 	return not id.is_empty() and not display_name.is_empty()
+
+
+## Consumes this item, applying any effects to the player.
+## In Phase 3 this is a stub: effects are applied in Phase 4 when PlayerStats exist.
+## [param player] — the player node (unused until Phase 4).
+func use(_player: Node) -> void:
+	var label := get_use_label()
+	if has_consumable_effects():
+		var parts: Array[String] = []
+		if restore_health  > 0: parts.append("+%.0f HP"      % restore_health)
+		if restore_oxygen  > 0: parts.append("+%.0f O2"      % restore_oxygen)
+		if restore_hunger  > 0: parts.append("+%.0f Hunger"  % restore_hunger)
+		if restore_thirst  > 0: parts.append("+%.0f Thirst"  % restore_thirst)
+		Debug.ok("%s %s (%s)" % [label, display_name, ", ".join(parts)])
+	else:
+		Debug.info("%s %s" % [label, display_name])

@@ -94,9 +94,9 @@ orbital_eden/
 - [x] `overlay` - toggle debug overlay from console
 - [x] `timescale` - game speed (works now)
 - [x] `pause` - toggle pause (works now)
-- [ ] Movement cheats (`noclip`, `fly`, `speed`, `tp`) — needs Phase 2 player
+- [x] Movement cheats (`noclip`, `fly`, `speed`, `tp`) — implemented in Phase 2
 - [ ] Stat cheats (`god`, `heal`, `damage`, etc.) — needs Phase 4 stats
-- [ ] Inventory cheats (`give`, `giveall`, etc.) — needs Phase 3 inventory
+- [x] Inventory cheats (`give`, `spawn`, `items`, `inv`) — implemented in Phase 3
 - [ ] Entity cheats (`spawn`, `killall`, etc.) — needs Phase 9 enemies
 
 ### 1.5 Debug Autoload ✅
@@ -285,12 +285,12 @@ orbital_eden/
 - [x] Drag preview, tooltips, and popups render above hotbar via overlay layer
 - [x] Test: Equip item to hotbar, select with number key, scroll wheel, drag cross-UI
 
-### 3.7 Item Usage
-- [ ] Items with `usable = true` can be consumed
-- [ ] `use(player)` method on ItemDefinition
-- [ ] For now: just remove from inventory and print message
+### 3.7 Item Usage ✅
+- [x] Items with `usable = true` can be consumed
+- [x] `use(player)` method on ItemDefinition
+- [x] For now: just remove from inventory and print message
 - [ ] Effects implemented in Phase 4 (stats)
-- [ ] Test: Use food ration, it disappears from inventory
+- [x] Test: Use food ration, it disappears from inventory
 
 ### 3.8 Console Item Commands ✅
 - [x] `give <item_id> [quantity]` - adds items to player inventory
@@ -299,12 +299,32 @@ orbital_eden/
 - [x] `spawn <item_id> [quantity]` - spawns WorldItem in front of player
 - [x] Test: All commands work correctly
 
-**Milestone 3 Complete:**
-- [ ] Can interact with objects in world
-- [ ] Items exist as resources with properties
-- [ ] Can pick up and drop items
-- [ ] Inventory UI works with drag/drop
-- [ ] Hotbar for quick access
+**Milestone 3 Complete ✅**
+- [x] Can interact with objects in world
+- [x] Items exist as resources with properties
+- [x] Can pick up and drop items
+- [x] Inventory UI works with drag/drop
+- [x] Hotbar for quick access
+
+### Phase 3 Code Quality Refactor ✅
+
+Post-milestone refactor following `.agents/skills/` best practices.
+
+#### inventory_ui.gd Split (1267 → 5 files) ✅
+- [x] `inventory_tooltip.gd` (~121 lines) — `InventoryTooltip extends PanelContainer` — hover tooltip
+- [x] `inventory_context_menu.gd` (~167 lines) — `InventoryContextMenu extends PanelContainer` — right-click menu
+- [x] `inventory_split_menu.gd` (~241 lines) — `InventorySplitMenu extends PanelContainer` — shift+right-click split
+- [x] `inventory_drag_handler.gd` (~274 lines) — `InventoryDragHandler extends RefCounted` — all drag state + logic
+- [x] `inventory_ui.gd` (~430 lines) — Coordinator that instantiates components and wires signals
+
+#### Shared Utilities Extracted ✅
+- [x] `PlaceholderTextureCache` (`ui/shared/placeholder_texture_cache.gd`) — static cache replacing duplicate code in `InventorySlot` and `HotbarUI`
+- [x] `Debug.is_ui_blocking()` — shared method replacing duplicate `_is_ui_blocking()` in `PlayerController` and `PlayerInteraction`
+
+#### Code Quality Fixes ✅
+- [x] `PlayerInventory` — proper `InventoryData` typing (was `Resource`), removed `InventoryDataScript` preload, removed empty handler
+- [x] Renamed `_a` → `_args` in `debug.gd` and `debug_console.gd` for clarity
+- [x] Fixed `ItemDefinition.use()` — prefixed unused `player` parameter as `_player`
 
 ---
 
