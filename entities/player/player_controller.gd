@@ -6,6 +6,10 @@ extends CharacterBody3D
 
 # === Signals ===
 signal cheat_mode_changed(mode: String, active: bool)
+## Emitted the frame the player leaves the floor via a jump.
+signal jumped
+## Emitted when the player takes damage. Payload: amount, type string.
+signal damaged(amount: float, type: String)
 
 # === Enums ===
 enum MoveMode { NORMAL, FLY, NOCLIP }
@@ -49,7 +53,10 @@ const GRAVITY: float = 9.8
 
 # === Public ===
 var move_mode: MoveMode = MoveMode.NORMAL
-var speed_multiplier: float = 1.0   # for `speed` cheat
+var speed_multiplier: float = 1.0           # for `speed` cheat
+## Applied by PlayerSurvival for thirst-based speed penalty. Separate from
+## speed_multiplier so the cheat and the survival system don't interfere.
+var survival_speed_multiplier: float = 1.0
 var god_mode: bool = false
 
 # === Private ===
@@ -59,6 +66,10 @@ var _is_crouching: bool = false
 var _current_eye_y: float = 1.6
 var _spawn_position: Vector3 = Vector3.ZERO
 var _spawn_rotation: float = 0.0
+## Invincibility frames timer. While > 0, take_damage() is ignored.
+var _invincibility_timer: float = 0.0
+## Duration of invincibility after taking a hit.
+const INVINCIBILITY_DURATION: float = 0.5
 
 # === Onready ===
 @onready var head: Node3D = $Head
@@ -109,6 +120,9 @@ func _input(event: InputEvent) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	if _invincibility_timer > 0.0:
+		_invincibility_timer -= delta
+
 	if Debug.is_ui_blocking():
 		# Still apply gravity so the player doesn't float
 		if move_mode == MoveMode.NORMAL and not is_on_floor():
@@ -138,6 +152,7 @@ func _process_normal(delta: float) -> void:
 	# Jump
 	if Input.is_action_just_pressed("jump") and is_on_floor():
 		velocity.y = jump_velocity
+		jumped.emit()
 
 	var current_speed := _get_current_speed()
 	var wish_dir := _get_wish_dir()
@@ -181,7 +196,7 @@ func _process_noclip(delta: float) -> void:
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 func _get_current_speed() -> float:
-	var s := walk_speed * speed_multiplier
+	var s := walk_speed * speed_multiplier * survival_speed_multiplier
 	if _is_crouching:
 		s *= crouch_multiplier
 	elif Input.is_action_pressed("sprint"):
@@ -267,12 +282,57 @@ func respawn() -> void:
 	global_position = _spawn_position
 	rotation.y = _spawn_rotation
 	velocity = Vector3.ZERO
+	_invincibility_timer = 0.0
 	Debug.ok("Respawned at %s" % _spawn_position)
+
+
+## Drop all inventory items as WorldItems at [param drop_pos].
+## Clears both the main bag and the hotbar.
+## [param scene_parent] — node to parent the dropped items under (e.g. Prototype or current_scene).
+func drop_inventory_at(drop_pos: Vector3, scene_parent: Node) -> void:
+	var inv_node: Node = get_node_or_null("Inventory")
+	if not is_instance_valid(inv_node):
+		return
+	var WorldItemScene: PackedScene = load("res://entities/world_item/world_item.tscn")
+	var bags: Array = [inv_node.inventory, inv_node.hotbar]
+	var rng := RandomNumberGenerator.new()
+	for bag in bags:
+		if bag == null:
+			continue
+		for i in range(bag.max_slots):
+			var stack = bag.clear_slot(i)
+			if stack == null or stack.is_empty():
+				continue
+			var world_item: Node = WorldItemScene.instantiate()
+			scene_parent.add_child(world_item)
+			# Scatter items slightly so they don't all overlap.
+			var offset := Vector3(rng.randf_range(-0.5, 0.5), 0.1, rng.randf_range(-0.5, 0.5))
+			world_item.global_position = drop_pos + offset
+			world_item.setup(stack.item, stack.quantity)
 
 
 func set_spawn(pos: Vector3, yaw: float = 0.0) -> void:
 	_spawn_position = pos
 	_spawn_rotation = yaw
+
+
+## Deal [param amount] damage of [param type] to the player.
+## Types: "physical", "fire", "electric", "toxic", "suffocation"
+## Respects god_mode. Invincibility frames apply unless [param bypass_iframes] is true.
+func take_damage(amount: float, type: String = "physical", bypass_iframes: bool = false) -> void:
+	if god_mode:
+		return
+	if _invincibility_timer > 0.0 and not bypass_iframes:
+		return
+	if not bypass_iframes:
+		_invincibility_timer = INVINCIBILITY_DURATION
+
+	# Drain health via the Survival component if present.
+	var survival: Node = get_node_or_null("Survival")
+	if is_instance_valid(survival):
+		survival.drain("health", amount)
+
+	damaged.emit(amount, type)
 
 
 func get_debug_snapshot() -> Dictionary:
@@ -289,6 +349,7 @@ func get_debug_snapshot() -> Dictionary:
 		"position": global_position,
 		"velocity": velocity,
 		"horizontal_speed": horizontal_speed,
+		"is_moving": horizontal_speed > 0.3,
 		"look_forward": look_forward,
 		"yaw_deg": rad_to_deg(rotation.y),
 		"pitch_deg": _pitch,
@@ -297,6 +358,7 @@ func get_debug_snapshot() -> Dictionary:
 		"sprinting": Input.is_action_pressed("sprint") and move_mode == MoveMode.NORMAL and not _is_crouching,
 		"mode": mode_name,
 		"speed_multiplier": speed_multiplier,
+		"survival_speed_multiplier": survival_speed_multiplier,
 		"god_mode": god_mode,
 	}
 

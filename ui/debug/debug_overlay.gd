@@ -155,6 +155,7 @@ func _refresh() -> void:
 	]
 
 	var player_rows := _get_player_rows()
+	var survival_rows := _get_survival_rows()
 
 	var physics_rows: Array = [
 		["Active objects", str(phys3d_active)],
@@ -175,6 +176,7 @@ func _refresh() -> void:
 	_set_panel_content("render", "RENDER", render_rows)
 	_set_panel_content("memory", "MEMORY", memory_rows)
 	_set_panel_content("player", "PLAYER", player_rows)
+	_set_panel_content("survival", "SURVIVAL [DEBUG]", survival_rows)
 	_set_panel_content("physics", "PHYSICS 3D", physics_rows)
 	_set_panel_content("world", "WORLD", world_rows)
 
@@ -207,6 +209,47 @@ func _get_player_rows() -> Array:
 		]],
 		["Cheats", "speed x%.2f  god:%s" % [float(d.get("speed_multiplier", 1.0)), _on_off(bool(d.get("god_mode", false)))]]
 	]
+
+
+func _get_survival_rows() -> Array:
+	var survival: Node = null
+	if is_instance_valid(_player):
+		survival = _player.get_node_or_null("Survival")
+
+	if not is_instance_valid(survival) or not survival.has_method("get_debug_snapshot"):
+		return [["Status", "PlayerSurvival not found", COLOR_WARN]]
+
+	var snap: Dictionary = survival.get_debug_snapshot()
+	if snap.is_empty():
+		return [["Status", "No stats data", COLOR_WARN]]
+
+	var rows: Array = []
+
+	# Status row — drain active + sprint state
+	var draining: bool = bool(snap.get("_draining", false))
+	var sprinting: bool = bool(snap.get("_sprinting", false))
+	var drain_col := COLOR_OK if draining else COLOR_DIM
+	var sprint_text := "  sprint:ON" if sprinting else ""
+	rows.append(["Status", ("drain:ON" if draining else "drain:OFF") + sprint_text, drain_col])
+
+	# One row per stat
+	var stat_order := ["health", "oxygen", "hunger", "thirst", "sanity", "stamina"]
+	for stat_name in stat_order:
+		if not snap.has(stat_name):
+			continue
+		var pair: Array = snap[stat_name]
+		var current: float = pair[0]
+		var maximum: float = pair[1]
+		var ratio := current / maximum if maximum > 0.0 else 0.0
+		var col: String
+		if ratio > 0.5:
+			col = COLOR_OK
+		elif ratio > 0.25:
+			col = COLOR_WARN
+		else:
+			col = COLOR_BAD
+		rows.append([stat_name.capitalize(), "%.1f / %.0f" % [current, maximum], col])
+	return rows
 
 
 func _resolve_player() -> void:
@@ -253,6 +296,7 @@ func _build_ui() -> void:
 	_panel_labels["player"] = _create_panel(_right_column)
 	_panel_labels["physics"] = _create_panel(_right_column)
 	_panel_labels["world"] = _create_panel(_right_column)
+	_panel_labels["survival"] = _create_panel(_right_column)
 
 
 func _create_panel(parent: VBoxContainer) -> RichTextLabel:

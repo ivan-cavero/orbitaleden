@@ -1,3 +1,4 @@
+class_name PrototypeScene
 extends Node3D
 ## Prototype scene with test items and console spawn functionality.
 ##

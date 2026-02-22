@@ -1,4 +1,4 @@
-[gd_scene load_steps=18 format=3 uid="uid://c6xtqkp8xnkl0"]
+[gd_scene load_steps=19 format=3 uid="uid://c6xtqkp8xnkl0"]
 
 [ext_resource type="Script" path="res://entities/interactable/interactable.gd" id="1_interactable"]
 [ext_resource type="Script" path="res://prototype/prototype.gd" id="2_prototype"]
@@ -10,6 +10,10 @@
 [ext_resource type="Resource" path="res://resources/items/definitions/oxygen_canister.tres" id="8_oxygen_canister"]
 [ext_resource type="Resource" path="res://resources/items/definitions/food_ration.tres" id="9_food_ration"]
 [ext_resource type="Resource" path="res://resources/items/definitions/water_bottle.tres" id="10_water_bottle"]
+[ext_resource type="PackedScene" path="res://entities/hazard/fire_hazard.tscn" id="11_fire_hazard"]
+[ext_resource type="PackedScene" path="res://entities/hazard/physical_hazard.tscn" id="12_physical_hazard"]
+[ext_resource type="PackedScene" path="res://entities/hazard/electric_hazard.tscn" id="13_electric_hazard"]
+[ext_resource type="PackedScene" path="res://entities/hazard/toxic_hazard.tscn" id="14_toxic_hazard"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_1"]
 sky_top_color = Color(0.0509804, 0.0509804, 0.152941, 1)
@@ -60,39 +64,43 @@ use_collision = true
 size = Vector3(100, 1, 100)
 material = SubResource("StandardMaterial3D_floor")
 
-[node name="SpawnPoint" type="Marker3D" parent="."]
+[node name="SpawnPoint" type="Marker3D" parent="." groups=["spawn_point"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
 
-[node name="TestCube" type="CSGBox3D" parent="."]
+[node name="TestGeometry" type="Node3D" parent="."]
+
+[node name="TestCube" type="CSGBox3D" parent="TestGeometry"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 1, 5)
 use_collision = true
 size = Vector3(2, 2, 2)
 
-[node name="SimpleCube" type="StaticBody3D" parent="."]
+[node name="InteractionTests" type="Node3D" parent="."]
+
+[node name="SimpleCube" type="StaticBody3D" parent="InteractionTests"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0.4, 2)
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="SimpleCube"]
+[node name="MeshInstance3D" type="MeshInstance3D" parent="InteractionTests/SimpleCube"]
 mesh = SubResource("BoxMesh_cube")
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="SimpleCube"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="InteractionTests/SimpleCube"]
 shape = SubResource("BoxShape3D_cube")
 
-[node name="Interactable" type="Node" parent="SimpleCube"]
+[node name="Interactable" type="Node" parent="InteractionTests/SimpleCube"]
 script = ExtResource("1_interactable")
 interaction_type = 0
 interaction_text = "Inspect Cube"
 highlight_color = Color(0.2, 0.6, 1, 1)
 
-[node name="ActivateButton" type="StaticBody3D" parent="."]
+[node name="ActivateButton" type="StaticBody3D" parent="InteractionTests"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0.15, 2)
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="ActivateButton"]
+[node name="MeshInstance3D" type="MeshInstance3D" parent="InteractionTests/ActivateButton"]
 mesh = SubResource("BoxMesh_cube")
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="ActivateButton"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="InteractionTests/ActivateButton"]
 shape = SubResource("BoxShape3D_cube")
 
-[node name="Interactable" type="Node" parent="ActivateButton"]
+[node name="Interactable" type="Node" parent="InteractionTests/ActivateButton"]
 script = ExtResource("1_interactable")
 interaction_type = 1
 text_activate = "Press Button"
@@ -103,16 +111,16 @@ use_state_colors = true
 color_inactive = Color(0.5, 0.2, 0.2, 1)
 color_active = Color(0.2, 0.9, 0.3, 1)
 
-[node name="ToggleSwitch" type="StaticBody3D" parent="."]
+[node name="ToggleSwitch" type="StaticBody3D" parent="InteractionTests"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.15, 3)
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="ToggleSwitch"]
+[node name="MeshInstance3D" type="MeshInstance3D" parent="InteractionTests/ToggleSwitch"]
 mesh = SubResource("BoxMesh_cube")
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="ToggleSwitch"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="InteractionTests/ToggleSwitch"]
 shape = SubResource("BoxShape3D_cube")
 
-[node name="Interactable" type="Node" parent="ToggleSwitch"]
+[node name="Interactable" type="Node" parent="InteractionTests/ToggleSwitch"]
 script = ExtResource("1_interactable")
 interaction_type = 2
 text_activate = "Turn On"
@@ -166,3 +174,17 @@ quantity = 2
 [node name="WaterBottle" parent="EditorItems" instance=ExtResource("3_world_item")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.5, 0.5, -1.5)
 item_definition = ExtResource("10_water_bottle")
+
+[node name="Hazards" type="Node3D" parent="."]
+
+[node name="FireHazard" parent="Hazards" instance=ExtResource("11_fire_hazard")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 1, 0)
+
+[node name="PhysicalHazard" parent="Hazards" instance=ExtResource("12_physical_hazard")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 1, 8)
+
+[node name="ElectricHazard" parent="Hazards" instance=ExtResource("13_electric_hazard")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 1, 0)
+
+[node name="ToxicHazard" parent="Hazards" instance=ExtResource("14_toxic_hazard")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 1, 8)

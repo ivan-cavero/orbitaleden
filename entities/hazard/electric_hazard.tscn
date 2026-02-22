@@ -1,0 +1,28 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://entities/hazard/hazard_zone.gd" id="1_script"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_1"]
+size = Vector3(4, 2, 4)
+
+[sub_resource type="StandardMaterial3D" id="Mat_1"]
+transparency = 1
+albedo_color = Color(0.8, 0.9, 0.1, 0.25)
+cull_mode = 2
+shading_mode = 1
+
+[sub_resource type="BoxMesh" id="BoxMesh_1"]
+material = SubResource("Mat_1")
+size = Vector3(4, 2, 4)
+
+[node name="ElectricHazard" type="Area3D"]
+script = ExtResource("1_script")
+damage_type = "electric"
+damage_per_second = 5.0
+
+[node name="ZoneShape" type="CollisionShape3D" parent="."]
+shape = SubResource("BoxShape3D_1")
+
+[node name="ZoneMesh" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_1")
+cast_shadow = 0

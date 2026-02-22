@@ -2,24 +2,40 @@ extends Node3D
 ## Main scene manager.
 ## Spawns the player at the prototype SpawnPoint and registers cheat commands.
 
+const SPAWN_POINT_GROUP := "spawn_point"
+
 const PLAYER_SCENE: PackedScene = preload("res://entities/player/player.tscn")
 const CHEAT_INDICATOR_SCENE: PackedScene = preload("res://ui/hud/cheat_indicator.tscn")
 const INTERACTION_PROMPT_SCENE: PackedScene = preload("res://ui/hud/interaction_prompt.tscn")
 const INVENTORY_UI_SCENE: PackedScene = preload("res://ui/inventory/inventory_ui.tscn")
 const HOTBAR_UI_SCENE: PackedScene = preload("res://ui/hud/hotbar_ui.tscn")
+const SCREEN_EFFECTS_SCENE: PackedScene = preload("res://ui/hud/screen_effects.tscn")
+const STATS_HUD_SCENE: PackedScene = preload("res://ui/hud/stats_hud.tscn")
+const DEATH_SCREEN_SCENE: PackedScene = preload("res://ui/hud/death_screen.tscn")
 
-# Using Node type to avoid class_name load-order issues; cast at usage sites.
-var _player: Node
+var _player: PlayerController
 var _cheat_indicator: Node
-var _interaction_prompt: Node
+var _interaction_prompt: InteractionPrompt
 var _inventory_ui: InventoryUI
-var _hotbar_ui: Node
+var _hotbar_ui: HotbarUI
+var _screen_effects: ScreenEffects
+var _stats_hud: StatsHUD
+var _death_screen: DeathScreen
+var _survival: PlayerSurvival
+
+@onready var _prototype: Node3D = $Prototype
 
 
 func _ready() -> void:
+	_setup_ui()
+	_spawn_player()
+	_register_commands()
+
+
+func _setup_ui() -> void:
 	_cheat_indicator = CHEAT_INDICATOR_SCENE.instantiate()
 	add_child(_cheat_indicator)
-	
+
 	_interaction_prompt = INTERACTION_PROMPT_SCENE.instantiate()
 	add_child(_interaction_prompt)
 
@@ -29,8 +45,14 @@ func _ready() -> void:
 	_hotbar_ui = HOTBAR_UI_SCENE.instantiate()
 	add_child(_hotbar_ui)
 
-	_spawn_player()
-	_register_commands()
+	_screen_effects = SCREEN_EFFECTS_SCENE.instantiate()
+	add_child(_screen_effects)
+
+	_stats_hud = STATS_HUD_SCENE.instantiate()
+	add_child(_stats_hud)
+
+	_death_screen = DEATH_SCREEN_SCENE.instantiate()
+	add_child(_death_screen)
 
 
 func _input(event: InputEvent) -> void:
@@ -44,55 +66,90 @@ func _input(event: InputEvent) -> void:
 
 func _spawn_player() -> void:
 	var spawn_point: Marker3D = _find_spawn_point()
+	if not is_instance_valid(spawn_point):
+		push_error("No spawn point found in group '%s'. Add the group to a Marker3D." % SPAWN_POINT_GROUP)
+		return
 
 	_player = PLAYER_SCENE.instantiate()
 	add_child(_player)
-
-	if is_instance_valid(spawn_point):
-		_player.global_position = spawn_point.global_position
-		_player.rotation.y = spawn_point.rotation.y
-		_player.set_spawn(spawn_point.global_position, spawn_point.rotation.y)
-		Debug.ok("Player spawned at SpawnPoint %s" % spawn_point.global_position)
-	else:
-		_player.global_position = Vector3(0.0, 1.0, 0.0)
-		Debug.warn("No SpawnPoint found — player placed at origin")
+	_player.global_position = spawn_point.global_position
+	_player.rotation.y = spawn_point.rotation.y
+	_player.set_spawn(spawn_point.global_position, spawn_point.rotation.y)
+	Debug.ok("Player spawned at SpawnPoint %s" % spawn_point.global_position)
 
 	_player.cheat_mode_changed.connect(_on_cheat_mode_changed)
-	
-	# Setup interaction prompt
-	var interaction: Node = _player.get_node_or_null("Interaction")
-	if interaction:
+	_player.damaged.connect(_on_player_damaged)
+
+	var interaction: PlayerInteraction = _player.get_node_or_null("Interaction")
+	if is_instance_valid(interaction):
 		_interaction_prompt.setup(interaction)
 
-	# Setup inventory UI
-	var inventory_node: Node = _player.get_node_or_null("Inventory")
-	if inventory_node and inventory_node.inventory:
+	var inventory_node: PlayerInventory = _player.get_node_or_null("Inventory")
+	if is_instance_valid(inventory_node):
 		_inventory_ui.setup(inventory_node.inventory)
-
-	# Setup hotbar
-	if inventory_node and inventory_node.hotbar:
 		_hotbar_ui.setup(inventory_node.hotbar)
 		_inventory_ui.setup_hotbar(_hotbar_ui, inventory_node.hotbar)
 
-	# Connect item usage signals so ItemDefinition.use() is called on consumption
+	# Connect item usage signals so ItemDefinition.use() is called on consumption.
 	_inventory_ui.item_used.connect(_on_item_used)
 	_hotbar_ui.item_used.connect(_on_item_used)
 
+	_survival = _player.get_node_or_null("Survival")
+	if not is_instance_valid(_survival):
+		push_error("Player scene is missing required child node 'Survival'.")
+		return
+
+	_screen_effects.setup(_survival)
+	_stats_hud.setup(_survival)
+	_survival.died.connect(_on_player_died)
+	if not _death_screen.respawn_pressed.is_connected(_on_respawn_pressed):
+		_death_screen.respawn_pressed.connect(_on_respawn_pressed)
+
 
 func _find_spawn_point() -> Marker3D:
-	# Look for any node in the spawn_point group
-	var nodes := get_tree().get_nodes_in_group("spawn_point")
-	if not nodes.is_empty():
-		return nodes[0] as Marker3D
-	# Fallback: direct path in prototype
-	var direct: Node = get_node_or_null("Prototype/SpawnPoint")
-	if is_instance_valid(direct) and direct is Marker3D:
-		return direct as Marker3D
-	return null
+	var nodes := get_tree().get_nodes_in_group(SPAWN_POINT_GROUP)
+	if nodes.is_empty():
+		return null
+	var marker := nodes[0] as Marker3D
+	if not is_instance_valid(marker):
+		return null
+	return marker
 
 
 func _on_cheat_mode_changed(mode: String, active: bool) -> void:
 	_cheat_indicator.set_cheat(mode, active)
+
+
+## Flash colours per damage type (peak alpha baked in).
+const DAMAGE_FLASH_COLORS: Dictionary = {
+	"physical":    Color(1.0,  0.05, 0.05, 0.40),
+	"fire":        Color(1.0,  0.45, 0.0,  0.40),
+	"electric":    Color(0.9,  0.95, 0.2,  0.40),
+	"toxic":       Color(0.1,  0.85, 0.1,  0.40),
+	"suffocation": Color(0.4,  0.55, 0.9,  0.40),
+}
+
+func _on_player_damaged(amount: float, type: String) -> void:
+	var color: Color = DAMAGE_FLASH_COLORS.get(type, Color(1, 0, 0, 0.35))
+	_screen_effects.flash(color, 0.35)
+	Debug.warn("Player took %.1f %s damage" % [amount, type])
+
+
+func _on_player_died(cause: String) -> void:
+	Debug.warn("Player died: %s" % cause)
+
+	# Drop all inventory at death location in the active gameplay scene.
+	_player.drop_inventory_at(_player.global_position, _prototype)
+
+	_death_screen.show_death(cause)
+	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+
+
+func _on_respawn_pressed() -> void:
+	_death_screen.hide_death()
+	_survival.reset_for_respawn()
+	_player.respawn()
+	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
 
 func _register_commands() -> void:
@@ -107,9 +164,22 @@ func _register_commands() -> void:
 	console.register_command("items",    _cmd_items,    "List all available item IDs")
 	console.register_command("inv",      _cmd_inv,      "Show inventory contents")
 	console.register_command("give",     _cmd_give,     "Add item to inventory. Usage: give <item_id> [quantity]")
+	# Phase 4.1 — survival debug commands
+	console.register_command("god",      _cmd_god,      "Toggle god mode (no health loss)")
+	console.register_command("heal",     _cmd_heal,     "Restore stat. Usage: heal [stat] [amount]  (default: health 100)")
+	console.register_command("damage",   _cmd_damage,   "Drain stat instantly. Usage: damage [stat] [amount]  (default: health 10)")
+	console.register_command("drain",    _cmd_drain,    "Drain all survival stats by amount. Usage: drain [amount]  (default: 10)")
+	# Phase 4.2 — drain toggle
+	console.register_command("nodrain",  _cmd_nodrain,  "Toggle passive stat drain on/off")
+	# Phase 4.3 — screen effects toggle
+	console.register_command("effects",  _cmd_effects,  "Toggle screen visual effects (vignette, desaturation)")
+	# Phase 4.4 — stats HUD
+	console.register_command("hud",      _cmd_hud,      "Toggle numeric values on stats HUD")
+	# Phase 4.5 — consumable test
+	console.register_command("useitem",  _cmd_useitem,  "Give and instantly use a consumable. Usage: useitem <item_id>")
 
 
-func _get_player() -> Node:
+func _get_player() -> PlayerController:
 	if is_instance_valid(_player):
 		return _player
 	Debug.error("No player instance found")
@@ -157,7 +227,10 @@ func _cmd_respawn(_args: Array[String]) -> void:
 	var p := _get_player()
 	if not is_instance_valid(p):
 		return
+	_survival.reset_for_respawn()
 	p.respawn()
+	_death_screen.hide_death()
+	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
 
 func _cmd_tp(args: Array[String]) -> void:
@@ -185,17 +258,11 @@ func _cmd_spawn(args: Array[String]) -> void:
 	var p := _get_player()
 	if not is_instance_valid(p):
 		return
-	
-	# Get prototype scene to spawn items
-	var prototype: Node = get_node_or_null("Prototype")
-	if not prototype or not prototype.has_method("spawn_item_at"):
-		Debug.error("No prototype scene with spawn support")
-		return
-	
+
 	# Spawn in front of player
 	var spawn_pos: Vector3 = p.global_position + (-p.global_transform.basis.z * 2.0) + Vector3.UP
-	
-	if prototype.spawn_item_at(item_id, spawn_pos, qty):
+
+	if _prototype.spawn_item_at(item_id, spawn_pos, qty):
 		Debug.ok("Spawned %dx %s" % [qty, item_id])
 	else:
 		Debug.error("Unknown item: %s (use 'items' to list)" % item_id)
@@ -211,11 +278,11 @@ func _cmd_inv(_args: Array[String]) -> void:
 	if not is_instance_valid(p):
 		return
 	
-	var inventory_node: Node = p.get_node_or_null("Inventory")
-	if not inventory_node or not inventory_node.has_method("print_inventory"):
+	var inventory_node: PlayerInventory = p.get_node_or_null("Inventory")
+	if not is_instance_valid(inventory_node):
 		Debug.error("Player has no inventory")
 		return
-	
+
 	inventory_node.print_inventory()
 
 
@@ -238,8 +305,8 @@ func _cmd_give(args: Array[String]) -> void:
 		Debug.error("Unknown item: %s (use 'items' to list)" % item_id)
 		return
 	
-	var inventory_node: Node = p.get_node_or_null("Inventory")
-	if not inventory_node:
+	var inventory_node: PlayerInventory = p.get_node_or_null("Inventory")
+	if not is_instance_valid(inventory_node):
 		Debug.error("Player has no inventory")
 		return
 	
@@ -254,3 +321,128 @@ func _cmd_give(args: Array[String]) -> void:
 
 func _on_item_used(item: ItemDefinition, _slot_index: int) -> void:
 	item.use(_player)
+	# Visual feedback — show floating "+N stat" labels on the HUD.
+	if item.restore_health > 0:
+		_stats_hud.show_restore_feedback("health", item.restore_health)
+	if item.restore_oxygen > 0:
+		_stats_hud.show_restore_feedback("oxygen", item.restore_oxygen)
+	if item.restore_hunger > 0:
+		_stats_hud.show_restore_feedback("hunger", item.restore_hunger)
+	if item.restore_thirst > 0:
+		_stats_hud.show_restore_feedback("thirst", item.restore_thirst)
+
+
+# ── Phase 4.1 survival debug commands ────────────────────────────────────────
+
+func _get_survival() -> PlayerSurvival:
+	if not is_instance_valid(_survival):
+		Debug.error("Player has no Survival component")
+		return null
+	return _survival
+
+
+func _cmd_god(_args: Array[String]) -> void:
+	var p := _get_player()
+	if not is_instance_valid(p):
+		return
+	p.god_mode = not p.god_mode
+	_cheat_indicator.set_cheat("god", p.god_mode, "GOD")
+	Debug.ok("God mode: %s" % ("ON" if p.god_mode else "OFF"))
+
+
+func _cmd_heal(args: Array[String]) -> void:
+	var survival := _get_survival()
+	if not is_instance_valid(survival):
+		return
+	var stat_name := "health" if args.is_empty() else args[0]
+	var amount := 100.0 if args.size() < 2 else args[1].to_float()
+	if stat_name == "all":
+		for s in ["health", "oxygen", "hunger", "thirst", "sanity", "stamina"]:
+			survival.restore(s, amount)
+		Debug.ok("Restored all stats by %.1f" % amount)
+	else:
+		survival.restore(stat_name, amount)
+		Debug.ok("Restored %s by %.1f" % [stat_name, amount])
+
+
+func _cmd_damage(args: Array[String]) -> void:
+	var survival := _get_survival()
+	if not is_instance_valid(survival):
+		return
+	var stat_name := "health" if args.is_empty() else args[0]
+	var amount := 10.0 if args.size() < 2 else args[1].to_float()
+	if stat_name == "all":
+		for s in ["health", "oxygen", "hunger", "thirst", "sanity", "stamina"]:
+			survival.drain(s, amount)
+		Debug.ok("Drained all stats by %.1f" % amount)
+	elif stat_name == "health":
+		# Route through take_damage so screen flash + invincibility frames fire.
+		var p := _get_player()
+		if not is_instance_valid(p):
+			return
+		p.take_damage(amount, "physical")
+		Debug.ok("Dealt %.1f physical damage" % amount)
+	else:
+		survival.drain(stat_name, amount)
+		Debug.ok("Drained %s by %.1f" % [stat_name, amount])
+
+
+func _cmd_drain(args: Array[String]) -> void:
+	var survival := _get_survival()
+	if not is_instance_valid(survival):
+		return
+	var amount := 10.0 if args.is_empty() else args[0].to_float()
+	for s in ["health", "oxygen", "hunger", "thirst", "sanity", "stamina"]:
+		survival.drain(s, amount)
+	Debug.ok("Drained all stats by %.1f" % amount)
+
+
+func _cmd_nodrain(_args: Array[String]) -> void:
+	var survival := _get_survival()
+	if not is_instance_valid(survival):
+		return
+	survival.draining_enabled = not survival.draining_enabled
+	var state := "ON" if survival.draining_enabled else "OFF"
+	_cheat_indicator.set_cheat("nodrain", not survival.draining_enabled, "NO DRAIN")
+	Debug.ok("Passive drain: %s" % state)
+
+
+# ── Phase 4.3 screen effects command ─────────────────────────────────────────
+
+func _cmd_effects(_args: Array[String]) -> void:
+	_screen_effects.effects_enabled = not _screen_effects.effects_enabled
+	var state := "ON" if _screen_effects.effects_enabled else "OFF"
+	Debug.ok("Screen effects: %s" % state)
+
+
+# ── Phase 4.4 stats HUD command ───────────────────────────────────────────────
+
+func _cmd_hud(_args: Array[String]) -> void:
+	_stats_hud.toggle_numbers()
+	Debug.ok("Stats HUD numbers toggled")
+
+
+# ── Phase 4.5 consumable test command ────────────────────────────────────────
+
+func _cmd_useitem(args: Array[String]) -> void:
+	if args.is_empty():
+		Debug.warn("Usage: useitem <item_id>")
+		return
+	var item_def := ItemDatabase.get_item(args[0])
+	if not item_def:
+		Debug.error("Unknown item: %s (use 'items' to list)" % args[0])
+		return
+	var p := _get_player()
+	if not is_instance_valid(p):
+		return
+	item_def.use(p)
+	# Visual feedback on HUD.
+	if item_def.restore_health > 0:
+		_stats_hud.show_restore_feedback("health", item_def.restore_health)
+	if item_def.restore_oxygen > 0:
+		_stats_hud.show_restore_feedback("oxygen", item_def.restore_oxygen)
+	if item_def.restore_hunger > 0:
+		_stats_hud.show_restore_feedback("hunger", item_def.restore_hunger)
+	if item_def.restore_thirst > 0:
+		_stats_hud.show_restore_feedback("thirst", item_def.restore_thirst)
+	Debug.ok("Used %s" % item_def.display_name)

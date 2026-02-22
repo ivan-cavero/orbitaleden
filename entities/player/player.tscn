@@ -1,8 +1,9 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://entities/player/player_controller.gd" id="1_player"]
 [ext_resource type="Script" path="res://entities/player/player_interaction.gd" id="2_interaction"]
 [ext_resource type="Script" path="res://entities/player/player_inventory.gd" id="3_inventory"]
+[ext_resource type="Script" path="res://entities/player/player_survival.gd" id="4_survival"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_1"]
 radius = 0.5
@@ -47,4 +48,7 @@ script = ExtResource("2_interaction")
 
 [node name="Inventory" type="Node" parent="."]
 script = ExtResource("3_inventory")
+
+[node name="Survival" type="Node" parent="."]
+script = ExtResource("4_survival")
 
