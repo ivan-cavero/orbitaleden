@@ -50,9 +50,10 @@ func show_for_slot(slot_index: int, stack: ItemStack, anchor_rect: Rect2) -> voi
 
 	_active_slot_index = slot_index
 
-	# Clear old buttons
+	# Clear old buttons (use free() for immediate removal, queue_free is deferred)
 	for child in _button_container.get_children():
-		child.queue_free()
+		_button_container.remove_child(child)
+		child.free()
 
 	var item_definition := stack.item
 
