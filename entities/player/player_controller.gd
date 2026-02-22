@@ -72,6 +72,7 @@ var _spawn_rotation: float = 0.0
 
 func _ready() -> void:
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+	add_to_group("player")
 	_spawn_position = global_position
 	_spawn_rotation = rotation.y
 	_current_eye_y = eye_height_stand
@@ -272,6 +273,32 @@ func respawn() -> void:
 func set_spawn(pos: Vector3, yaw: float = 0.0) -> void:
 	_spawn_position = pos
 	_spawn_rotation = yaw
+
+
+func get_debug_snapshot() -> Dictionary:
+	var look_forward := -head.global_transform.basis.z
+	var horizontal_speed := Vector2(velocity.x, velocity.z).length()
+	var mode_name := "NORMAL"
+	match move_mode:
+		MoveMode.FLY:
+			mode_name = "FLY"
+		MoveMode.NOCLIP:
+			mode_name = "NOCLIP"
+
+	return {
+		"position": global_position,
+		"velocity": velocity,
+		"horizontal_speed": horizontal_speed,
+		"look_forward": look_forward,
+		"yaw_deg": rad_to_deg(rotation.y),
+		"pitch_deg": _pitch,
+		"on_floor": is_on_floor(),
+		"crouching": _is_crouching,
+		"sprinting": Input.is_action_pressed("sprint") and move_mode == MoveMode.NORMAL and not _is_crouching,
+		"mode": mode_name,
+		"speed_multiplier": speed_multiplier,
+		"god_mode": god_mode,
+	}
 
 
 func _push_rigid_bodies() -> void:
